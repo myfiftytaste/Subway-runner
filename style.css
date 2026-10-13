@@ -1,0 +1,249 @@
+/* Plan de ville en plein jour : la carte occupe tout l'écran, le texte tient dans une colonne à gauche.
+   Une seule audace : l'orange Strava qui se trace sur les lignes courues. Le reste reste calme. */
+:root {
+  --paper: #EDF1EF;   /* fond, calcaire froid */
+  --land: #E1E7E4;    /* Paris intra-muros */
+  --edge: #C3CDC8;    /* limites d'arrondissement */
+  --seine: #BFD4DC;
+  --ink: #1E2B32;
+  --muted: #5D6C73;
+  --strava: #FC4C02;
+  --lift: 0%;         /* éclaircit les couleurs RATP sombres sur fond nuit */
+  --display: "Barlow Semi Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --body: "Barlow", "Segoe UI", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0F1E27; --land: #152A36; --edge: #24404F; --seine: #0A1820;
+    --ink: #E5ECEE; --muted: #8FA3AC; --strava: #FF5A14; --lift: 42%;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0F1E27; --land: #152A36; --edge: #24404F; --seine: #0A1820;
+  --ink: #E5ECEE; --muted: #8FA3AC; --strava: #FF5A14; --lift: 42%;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+/* --cc : couleur officielle de la ligne, éclaircie en mode sombre */
+[style*="--c:"], .roundel, .strip span { --cc: color-mix(in srgb, var(--c), #fff var(--lift)); }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 1rem/1.55 var(--body);
+  -webkit-font-smoothing: antialiased;
+}
+
+.app {
+  display: grid;
+  grid-template-columns: minmax(300px, 400px) minmax(0, 1fr);
+  grid-template-rows: auto auto 1fr auto;
+  grid-template-areas:
+    "intro map"
+    "lines map"
+    "progress map"
+    "credits map";
+  column-gap: clamp(1rem, 3vw, 3rem);
+  min-height: 100%;
+  padding-inline: clamp(1rem, 3vw, 2.5rem);
+  padding-block: clamp(1.25rem, 3vw, 2.5rem);
+}
+
+/* ——— Texte ——— */
+.intro { grid-area: intro; }
+.brand {
+  margin: 0 0 1.75rem;
+  font: 700 1rem/1 var(--display);
+  letter-spacing: .02em;
+  color: var(--strava);
+}
+h1 {
+  margin: 0;
+  font: 600 clamp(2.4rem, 4.6vw, 3.6rem)/0.95 var(--display);
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+.lede {
+  margin: 1rem 0 0;
+  max-width: 34ch;
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+
+/* ——— Pastilles de ligne ——— */
+.lines { grid-area: lines; margin-top: 2rem; }
+.roundels {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(8, 2.4rem);
+  gap: .55rem;
+}
+.roundel {
+  position: relative;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  border: 2px solid var(--c);
+  background: var(--c);
+  color: var(--t);
+  font: 700 1.05rem/1 var(--display);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+  transition: transform .15s ease, opacity .2s ease;
+}
+.roundel sup { font-size: .55em; margin-left: 1px; }
+.roundel.is-todo {
+  background: transparent;
+  color: var(--ink);
+  border-style: dashed;
+  border-color: var(--cc);
+}
+/* La pastille orange signale une course enregistrée */
+.roundel.is-done::after {
+  content: "";
+  position: absolute;
+  right: -3px;
+  top: -3px;
+  width: .7rem;
+  height: .7rem;
+  border-radius: 50%;
+  background: var(--strava);
+  border: 2px solid var(--paper);
+}
+.roundel:hover { transform: translateY(-2px); }
+.roundel:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.roundel[aria-pressed="true"] { transform: scale(1.12); }
+.roundels.has-focus .roundel:not([aria-pressed="true"]) { opacity: .35; }
+
+.detail {
+  margin-top: 1.1rem;
+  min-height: 3.4rem;
+  max-width: 36ch;
+}
+.detail .route {
+  margin: 0;
+  font: 600 1.2rem/1.2 var(--display);
+}
+.detail .facts { margin: .2rem 0 0; color: var(--muted); }
+.detail .hint { margin: 0; color: var(--muted); font-size: .95rem; }
+.detail a { color: var(--strava); text-underline-offset: 2px; }
+
+/* ——— Progression ——— */
+.progress { grid-area: progress; align-self: end; margin-top: 2rem; }
+.stats {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 1.6rem;
+}
+.stats div { display: flex; flex-direction: column-reverse; }
+.stats dt { color: var(--muted); font-size: .9rem; }
+.stats dd {
+  margin: 0;
+  font: 600 2.1rem/1 var(--display);
+  font-variant-numeric: tabular-nums;
+}
+.stats dd small { font-size: .55em; font-weight: 500; color: var(--muted); margin-left: .15em; }
+
+/* Une bande par ligne, longueur proportionnelle aux kilomètres */
+.strip {
+  display: flex;
+  gap: 3px;
+  height: 8px;
+  margin-top: 1.25rem;
+}
+.strip span {
+  flex: var(--km) 1 0;
+  border-radius: 2px;
+  background: repeating-linear-gradient(90deg, var(--cc) 0 3px, transparent 3px 7px);
+  opacity: .7;
+}
+.strip span.is-done { background: var(--strava); opacity: 1; }
+
+.credits {
+  grid-area: credits;
+  margin-top: 1.75rem;
+  color: var(--muted);
+  font-size: .8rem;
+  line-height: 1.45;
+}
+.credits p { margin: 0; max-width: 46ch; }
+.credits p + p { margin-top: .25rem; }
+
+/* ——— Carte ——— */
+.map {
+  grid-area: map;
+  margin: 0;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+}
+.map svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.map { overflow: hidden; }
+.arr { fill: var(--land); stroke: var(--edge); stroke-width: calc(var(--u, 1) * 0.8px); }
+.eau { fill: var(--seine); stroke: none; }
+
+.todo {
+  fill: none;
+  stroke: var(--cc);
+  stroke-width: calc(var(--u, 1) * 3.4px);
+  stroke-linecap: round;
+  stroke-dasharray: calc(var(--u, 1) * 0.1px) calc(var(--u, 1) * 7px);
+  animation: blink 2.8s ease-in-out infinite alternate;
+  animation-delay: calc(var(--i) * -0.45s);
+}
+@keyframes blink { from { opacity: .45; } to { opacity: 1; } }
+
+.ghost { fill: none; stroke: var(--cc); stroke-width: calc(var(--u, 1) * 1.8px); stroke-linejoin: round; }
+.is-focus .ghost { stroke-width: calc(var(--u, 1) * 2.4px); opacity: 1; }
+.run {
+  fill: none;
+  stroke: var(--strava);
+  stroke-width: calc(var(--u, 1) * 2.8px);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: draw 1.5s cubic-bezier(.55, 0, .25, 1) forwards;
+  animation-delay: calc(var(--i) * 160ms + 250ms);
+}
+@keyframes draw { to { stroke-dashoffset: 0; } }
+
+.hit { fill: none; stroke: transparent; stroke-width: calc(var(--u, 1) * 16px); cursor: pointer; pointer-events: stroke; }
+
+.line { transition: opacity .25s ease; }
+svg.has-focus .line:not(.is-focus) { opacity: .12; }
+svg.has-focus .line.is-focus .todo { animation: none; opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .run { animation: none; stroke-dashoffset: 0; }
+  .todo { animation: none; opacity: .8; }
+  .roundel, .line { transition: none; }
+}
+
+/* ——— Téléphone : texte, carte, pastilles, chiffres ——— */
+@media (max-width: 860px) {
+  .app {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-template-areas: "intro" "map" "lines" "progress" "credits";
+    min-height: 0;
+  }
+  .map { height: min(118vw, 72vh); margin-top: 1rem; }
+  .lines { margin-top: 1rem; }
+  .roundels { grid-template-columns: repeat(8, 2.2rem); gap: .45rem; }
+  .roundel { width: 2.2rem; height: 2.2rem; }
+  .brand { margin-bottom: 1.1rem; }
+}
