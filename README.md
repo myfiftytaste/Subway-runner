@@ -8,7 +8,13 @@ allure, temps).
 
 Site statique, sans framework ni dépendance : `index.html`, `style.css`,
 `app.js` et trois fichiers de données. La carte est dessinée en SVG à la main
-(projection, recollage des tronçons, animation du tracé).
+(projection, recollage des tronçons, animation du tracé). Les chiffres de la
+section « En chiffres » sont recalculés au chargement depuis les traces : écart
+au tracé officiel, traversées de la Seine (changement de rive d'après les
+arrondissements), stations longées à moins de 350 m. Les temps de parcours en
+métro viennent de Wikipédia et sont dans `LINES`, en tête de `app.js`.
+
+Le site existe en français et en anglais (bouton FR/EN, ou `#en` dans l'adresse).
 
 ## Données
 
@@ -16,6 +22,7 @@ Site statique, sans framework ni dépendance : `index.html`, `style.css`,
 |---|---|---|
 | `data/metro-lines.json` | tracés des 16 lignes, en polylines encodées | Île-de-France Mobilités, jeu « Tracés du réseau ferré IDF » |
 | `data/paris-fond.json` | arrondissements et voies d'eau | Ville de Paris, open data |
+| `data/stations.json` | les 405 arrêts par ligne (nom, position) | Île-de-France Mobilités, jeu « Emplacement des gares IDF » |
 | `data/runs.json` | nos courses : date, km, temps, lien Strava, trace GPS | Strava, synchronisé toutes les heures |
 
 Les traces sont simplifiées à 4 m près : les zigzags de la course restent,

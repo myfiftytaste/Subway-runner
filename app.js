@@ -4,25 +4,98 @@
 // Lien du bouton « Flux live Strava ». Vide : on renvoie vers la dernière course.
 const STRAVA_PROFILE = ""; // ex. https://www.strava.com/athletes/12345678
 
-// Ordre RATP. st = nombre de stations (open data IDFM), utile pour les stats.
+// Ordre RATP. min : temps de parcours terminus à terminus en métro, en minutes (Wikipédia,
+// moyenne des deux sens). 7 : branche de Mairie d'Ivry, la valeur basse. 13 : non publié.
 const LINES = [
-  { id: "1", route: "La Défense ↔ Château de Vincennes", st: 25 },
-  { id: "2", route: "Porte Dauphine ↔ Nation", st: 25 },
-  { id: "3", route: "Pont de Levallois ↔ Gallieni", st: 25 },
-  { id: "3bis", route: "Gambetta ↔ Porte des Lilas", st: 4 },
-  { id: "4", route: "Porte de Clignancourt ↔ Bagneux–Lucie Aubrac", st: 29 },
-  { id: "5", route: "Bobigny–Pablo Picasso ↔ Place d'Italie", st: 22 },
-  { id: "6", route: "Charles de Gaulle–Étoile ↔ Nation", st: 28 },
-  { id: "7", route: "La Courneuve ↔ Villejuif / Mairie d'Ivry", st: 38 },
-  { id: "7bis", route: "Louis Blanc ↔ Pré-Saint-Gervais", st: 8 },
-  { id: "8", route: "Balard ↔ Créteil–Pointe du Lac", st: 38 },
-  { id: "9", route: "Pont de Sèvres ↔ Mairie de Montreuil", st: 37 },
-  { id: "10", route: "Boulogne–Pont de Saint-Cloud ↔ Gare d'Austerlitz", st: 23 },
-  { id: "11", route: "Châtelet ↔ Rosny–Bois-Perrier", st: 19 },
-  { id: "12", route: "Mairie d'Issy ↔ Mairie d'Aubervilliers", st: 31 },
-  { id: "13", route: "Châtillon–Montrouge ↔ Saint-Denis / Les Courtilles", st: 32 },
-  { id: "14", route: "Saint-Denis Pleyel ↔ Aéroport d'Orly", st: 21 },
+  { id: "1", route: "La Défense ↔ Château de Vincennes", min: 35 },
+  { id: "2", route: "Porte Dauphine ↔ Nation", min: 34 },
+  { id: "3", route: "Pont de Levallois ↔ Gallieni", min: 31.5 },
+  { id: "3bis", route: "Gambetta ↔ Porte des Lilas", min: 4 },
+  { id: "4", route: "Porte de Clignancourt ↔ Bagneux–Lucie Aubrac", min: 35.5 },
+  { id: "5", route: "Bobigny–Pablo Picasso ↔ Place d'Italie", min: 35 },
+  { id: "6", route: "Charles de Gaulle–Étoile ↔ Nation", min: 33 },
+  { id: "7", route: "La Courneuve ↔ Villejuif / Mairie d'Ivry", min: 48 },
+  { id: "7bis", route: "Louis Blanc ↔ Pré-Saint-Gervais", min: 8 },
+  { id: "8", route: "Balard ↔ Créteil–Pointe du Lac", min: 52 },
+  { id: "9", route: "Pont de Sèvres ↔ Mairie de Montreuil", min: 52 },
+  { id: "10", route: "Boulogne–Pont de Saint-Cloud ↔ Gare d'Austerlitz", min: 28.5 },
+  { id: "11", route: "Châtelet ↔ Rosny–Bois-Perrier", min: 25 },
+  { id: "12", route: "Mairie d'Issy ↔ Mairie d'Aubervilliers", min: 38.5 },
+  { id: "13", route: "Châtillon–Montrouge ↔ Saint-Denis / Les Courtilles", min: null },
+  { id: "14", route: "Saint-Denis Pleyel ↔ Aéroport d'Orly", min: 42 },
 ];
+const PASSED_M = 350;        // une station compte si notre trace passe à moins de 350 m
+const LEFT_BANK = [5, 6, 7, 13, 14, 15]; // arrondissements de la rive gauche
+const DEV_MIN_M = 30;        // en dessous, l'écart avec le tracé officiel n'est pas hachuré
+const M_PER_UNIT = 111.195;  // une unité de carte = 1/1000 de degré de latitude
+
+const I18N = {
+  fr: {
+    locale: "fr-FR", other: "EN", otherLabel: "Read in English",
+    live: "Flux live Strava",
+    title: "Paris, ligne par ligne.",
+    lede: "Tobias et moi courons depuis plusieurs années. Arrivés à Paris, peut-être rapidement lassés des quais et parcs, une drôle de quête s'est formée dans notre esprit : courir (dans l'ordre bien sûr) les 16 lignes du métro parisien. Cette carte interactive en est la trace.",
+    mapTitle: "Carte du métro parisien : traces de course en orange, lignes restantes en pointillés",
+    hint: "Survolez ou touchez une ligne pour voir son parcours.",
+    onStrava: "Voir la course sur Strava",
+    notYet: (n) => `${n} stations, pas encore courue.`,
+    roundel: (id, done) => `Ligne ${id}, ${done ? "courue" : "à courir"}`,
+    linesRun: "lignes courues", kmRun: "courus", lastRun: "dernière course",
+    ofNetwork: "du réseau", ofStations: "des stations", outOf: (a, b) => `${a} sur ${b}`,
+    line: "Ligne", upcoming: "à venir", distance: "Distance", pace: "Allure", time: "Temps", offset: "Écart moyen", route: "Tracé", stations: "Stations",
+    run: "Couru", toCome: "À venir",
+    numbers: "En chiffres",
+    numbersHint: "Survolez ou touchez un chiffre pour le voir sur la carte.",
+    devLabel: "d'écart moyen avec le tracé officiel",
+    devSub: (lo, llo, hi, lhi, peak) => `De ${lo} m sur la ${llo}, la plus fidèle, à ${hi} m sur la ${lhi}, avec une pointe à ${peak} m.`,
+    seineLabel: "traversées de la Seine", seineSub: "Comptées rive à rive : passer par l'île de la Cité compte pour une.",
+    portesLabel: (n) => `portes de Paris franchies, sur ${n}`, portesSub: "Les stations « Porte de… » passées au moins une fois.",
+    timeLabel: (metro) => `courus, contre ${metro} en métro*`,
+    timeSub: (n, lines) => `Sur ${n === 1 ? "la ligne chronométrée" : `les ${n} lignes chronométrées`} (${lines}).`,
+    timeNote: "* Temps de parcours d'un terminus à l'autre, rame à l'heure et sans incident à bord. Source : Wikipédia.",
+    histTitle: "Combien de fois on est passés par chaque station",
+    histSub: (n) => `${n} stations au total. Une station compte quand notre trace passe à moins de ${PASSED_M} m.`,
+    bar: (k) => (k === 0 ? "jamais" : `${k} fois`),
+    barAria: (k, n) => `${n} stations passées ${k === 0 ? "aucune fois" : `${k} fois`}`,
+    credits1: "Tracés des lignes et stations : Île-de-France Mobilités. Fond de carte : Ville de Paris. Courses enregistrées sur Strava.",
+    credits2: "Couru avec Tobias. Carte et site : Mathéo Gunay.",
+  },
+  en: {
+    locale: "en-GB", other: "FR", otherLabel: "Lire en français",
+    live: "Live Strava feed",
+    title: "Paris, line by line.",
+    lede: "Tobias and I have been running for years. When we moved to Paris, perhaps quickly tired of the riverbanks and parks, an odd quest took shape: run all 16 lines of the Paris metro (in order, of course). This interactive map is its trace.",
+    mapTitle: "Map of the Paris metro: our runs in orange, lines still to run dotted",
+    hint: "Hover or tap a line to see its run.",
+    onStrava: "See the run on Strava",
+    notYet: (n) => `${n} stations, not run yet.`,
+    roundel: (id, done) => `Line ${id}, ${done ? "run" : "to run"}`,
+    linesRun: "lines run", kmRun: "run", lastRun: "last run",
+    ofNetwork: "of the network", ofStations: "of stations", outOf: (a, b) => `${a} of ${b}`,
+    line: "Line", upcoming: "coming up", distance: "Distance", pace: "Pace", time: "Time", offset: "Avg. offset", route: "Route", stations: "Stations",
+    run: "Run", toCome: "To come",
+    numbers: "By the numbers",
+    numbersHint: "Hover or tap a figure to see it on the map.",
+    devLabel: "average offset from the official route",
+    devSub: (lo, llo, hi, lhi, peak) => `From ${lo} m on line ${llo}, the most faithful, to ${hi} m on line ${lhi}, peaking at ${peak} m.`,
+    seineLabel: "Seine crossings", seineSub: "Counted bank to bank: going via Île de la Cité counts as one.",
+    portesLabel: (n) => `city gates passed, out of ${n}`, portesSub: "The “Porte de…” stations we have passed at least once.",
+    timeLabel: (metro) => `running, against ${metro} by metro*`,
+    timeSub: (n, lines) => `On the ${n === 1 ? "timed line" : `${n} timed lines`} (${lines}).`,
+    timeNote: "* End-to-end travel time, train on schedule and no incident on board. Source: Wikipedia (fr).",
+    histTitle: "How many times we passed each station",
+    histSub: (n) => `${n} stations in all. A station counts when our trace passes within ${PASSED_M} m.`,
+    bar: (k) => (k === 0 ? "never" : `${k}×`),
+    barAria: (k, n) => `${n} stations passed ${k === 0 ? "never" : `${k} times`}`,
+    credits1: "Lines and stations: Île-de-France Mobilités. Base map: Ville de Paris. Runs recorded on Strava.",
+    credits2: "Run with Tobias. Map and site: Mathéo Gunay.",
+  },
+};
+
+// Langue : #en ou #fr dans l'adresse, sinon le dernier choix, sinon celle du navigateur
+const store = { get: () => { try { return localStorage.getItem("lang"); } catch { return null; } }, set: (v) => { try { localStorage.setItem("lang", v); } catch { /* navigation privée */ } } };
+let lang = ["fr", "en"].find((l) => location.hash === "#" + l) || store.get() || (navigator.language.startsWith("fr") ? "fr" : "en");
+const T = () => I18N[lang];
 
 const NS = "http://www.w3.org/2000/svg";
 const LAT0 = 48.86, K = Math.cos(LAT0 * Math.PI / 180), SCALE = 1000;
@@ -89,18 +162,55 @@ function el(name, attrs, parent) {
   return n;
 }
 
+// Point le plus proche de p sur le segment ab, en coordonnées de carte
+function nearestOnSegment(p, a, b) {
+  const bx = b[0] - a[0], by = b[1] - a[1], L = bx * bx + by * by;
+  const t = L ? Math.max(0, Math.min(1, ((p[0] - a[0]) * bx + (p[1] - a[1]) * by) / L)) : 0;
+  return [a[0] + t * bx, a[1] + t * by];
+}
+function nearestOn(p, edges) {
+  let best = null, d = Infinity;
+  for (const [a, b] of edges) {
+    const q = nearestOnSegment(p, a, b), e = (q[0] - p[0]) ** 2 + (q[1] - p[1]) ** 2;
+    if (e < d) { d = e; best = q; }
+  }
+  return { q: best, m: Math.sqrt(d) * M_PER_UNIT };
+}
+const edgesOf = (chains) => chains.flatMap((c) => { const p = c.map(project); return p.slice(1).map((b, i) => [p[i], b]); });
+
+// Points régulièrement espacés le long d'une trace
+function resample(pts, step) {
+  const out = [pts[0]];
+  for (let i = 1; i < pts.length; i++) {
+    const [a, b] = [pts[i - 1], pts[i]], n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / step);
+    for (let t = 1; t <= n; t++) out.push([a[0] + (b[0] - a[0]) * t / n, a[1] + (b[1] - a[1]) * t / n]);
+  }
+  return out;
+}
+
+function insidePolygon([x, y], poly) {
+  let c = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i], [xj, yj] = poly[j];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c;
+  }
+  return c;
+}
+
 // Texte lisible sur la couleur officielle de la ligne
 function textOn(hex) {
   const [r, g, b] = [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
   return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.45 ? "#1E2B32" : "#FFFFFF";
 }
 
-const fmt = (n, d = 0) => n.toLocaleString("fr-FR", { minimumFractionDigits: d, maximumFractionDigits: d });
+const fmt = (n, d = 0) => n.toLocaleString(T().locale, { minimumFractionDigits: d, maximumFractionDigits: d });
 const label = (id) => `<span>${id.replace("bis", "<sup>bis</sup>")}</span>`;
-const day = (iso, opts = { day: "numeric", month: "long", year: "numeric" }) => new Date(iso + "T12:00").toLocaleDateString("fr-FR", opts);
+const day = (iso, opts = { day: "numeric", month: "long", year: "numeric" }) => new Date(iso + "T12:00").toLocaleDateString(T().locale, opts);
 const pace = (sec, km) => { const s = Math.round(sec / km); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
-const duration = (sec) => { const h = Math.floor(sec / 3600), m = Math.round((sec % 3600) / 60); return h ? `${h}h ${String(m).padStart(2, "0")}` : `${m} min`; };
+const duration = (sec) => { const h = Math.floor(sec / 3600), m = Math.round((sec % 3600) / 60); return h ? `${h} h ${String(m).padStart(2, "0")}` : `${m} min`; };
+const norm = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const phone = () => matchMedia("(max-width: 860px)").matches;
 
 // Coureur articulé : la hanche est fixe, cuisses, tibias, bras et avant-bras sont recalculés à chaque image
 const RUNNER = (cls, name) => `<svg class="runner ${cls}" viewBox="-12 -16 24 30" role="img" aria-label="${name}">
@@ -148,11 +258,11 @@ function animateRunners(svgs) {
 async function load() {
   if (window.__DATA) return window.__DATA; // version tout-en-un (aperçu)
   const get = (f) => fetch("data/" + f).then((r) => r.json());
-  const [metro, fond, runs] = await Promise.all([get("metro-lines.json"), get("paris-fond.json"), get("runs.json")]);
-  return { metro, fond, runs };
+  const [metro, fond, runs, stations] = await Promise.all(["metro-lines", "paris-fond", "runs", "stations"].map((f) => get(f + ".json")));
+  return { metro, fond, runs, stations };
 }
 
-load().then(({ metro, fond, runs }) => {
+load().then(({ metro, fond, runs, stations }) => {
   const svg = document.getElementById("svg");
 
   const lines = LINES.map((meta, i) => {
@@ -160,16 +270,61 @@ load().then(({ metro, fond, runs }) => {
     const segs = raw.s.map(decode);
     const run = runs[meta.id] || null;
     const trace = run && run.trace ? decode(run.trace) : null;
+    const chains = chain(segs);
     return {
-      ...meta, i, color: "#" + raw.c, segs,
-      chains: chain(segs),
+      ...meta, i, color: "#" + raw.c, segs, chains, edges: edgesOf(chains),
+      st: stations[meta.id].length,
       km: segs.reduce((s, p) => s + km(p), 0),
       run, trace, done: !!run,
       ranKm: run ? (run.km || (trace ? km(trace) : segs.reduce((s, p) => s + km(p), 0))) : 0,
     };
   });
+  const done = lines.filter((l) => l.done);
 
-  // Cadre : Paris et mes traces, avec une marge. Les antennes de banlieue restantes filent hors champ.
+  // ——— Calculs : écarts, stations, portes, Seine ———
+  for (const l of done.filter((x) => x.trace)) {
+    const samples = resample(l.trace.map(project), 25 / M_PER_UNIT);
+    const hits = samples.map((p) => ({ p, ...nearestOn(p, l.edges) }));
+    l.devMean = hits.reduce((s, h) => s + h.m, 0) / hits.length;
+    l.devMax = Math.max(...hits.map((h) => h.m));
+    l.devD = hits.filter((h) => h.m > DEV_MIN_M).map(({ p, q }) => `M${p[0].toFixed(2)},${p[1].toFixed(2)}L${q[0].toFixed(2)},${q[1].toFixed(2)}`).join("");
+    l.traceEdges = l.trace.map(project).slice(1).map((b, k) => [project(l.trace[k]), b]);
+  }
+
+  // Une station par nom, avec les lignes qui la desservent et celles qu'on a vraiment longées
+  const byName = new Map();
+  for (const l of lines) {
+    for (const [name, lon, lat] of stations[l.id]) {
+      const key = norm(name);
+      const s = byName.get(key) || { name, pts: [], lines: [], passed: [] };
+      s.pts.push(project([lon, lat]));
+      s.lines.push(l.id);
+      if (l.done && (!l.traceEdges || nearestOn(project([lon, lat]), l.traceEdges).m <= PASSED_M)) s.passed.push(l.id);
+      byName.set(key, s);
+    }
+  }
+  const uniq = [...byName.values()].map((s) => ({ ...s, p: [s.pts.reduce((a, q) => a + q[0], 0) / s.pts.length, s.pts.reduce((a, q) => a + q[1], 0) / s.pts.length] }));
+  const portes = uniq.filter((s) => /^porte\b/i.test(s.name));
+
+  // Traversées de la Seine : changement de rive d'un point de trace au suivant, rive lue sur l'arrondissement
+  const arrs = fond.arr.map((r) => decode(r));
+  const bank = (p) => {
+    const i = arrs.findIndex((poly) => insidePolygon(p, poly));
+    if (i >= 0) return LEFT_BANK.includes(i + 1) ? "L" : "R";
+    if (p[1] > 48.875 && p[0] < 2.28) return p[0] < 2.2555 ? "L" : "R"; // pont de Neuilly : La Défense en face, Neuilly de ce côté
+    return null; // ailleurs hors de Paris : on garde la dernière rive connue
+  };
+  const crossings = [];
+  for (const l of done.filter((x) => x.trace)) {
+    let last = null, prev = null;
+    for (const p of l.trace) {
+      const b = bank(p);
+      if (b && last && b !== last) crossings.push(project([(p[0] + prev[0]) / 2, (p[1] + prev[1]) / 2]));
+      if (b) { last = b; prev = p; }
+    }
+  }
+
+  // ——— Carte ———
   const framed = [...fond.arr.flatMap((r) => decode(r)), ...lines.flatMap((l) => l.trace || [])].map(project);
   const xs = framed.map((p) => p[0]), ys = framed.map((p) => p[1]);
   const pad = 3;
@@ -178,13 +333,14 @@ load().then(({ metro, fond, runs }) => {
 
   // --u = unités SVG par pixel écran, pour garder des traits de la même épaisseur à toutes les tailles
   const scale = document.getElementById("scale");
+  let unit = 1;
   const sizeUnit = () => {
     const r = svg.getBoundingClientRect();
     if (!r.width || !r.height) return;
-    const u = Math.max(box[2] / r.width, box[3] / r.height);
-    svg.style.setProperty("--u", u.toFixed(4));
+    unit = Math.max(box[2] / r.width, box[3] / r.height);
+    svg.style.setProperty("--u", unit.toFixed(4));
     // 1 km = 1/111,2 degré de latitude ; on prend la plus grande longueur ronde qui tient en ~110 px
-    const pxPerKm = 1000 / 111.195 / u;
+    const pxPerKm = 1000 / M_PER_UNIT / unit;
     const kmBar = [5, 2, 1, 0.5].find((k) => k * pxPerKm <= 110) || 0.5;
     scale.style.setProperty("--w", (kmBar * pxPerKm).toFixed(1) + "px");
     scale.querySelector("span").textContent = `${fmt(kmBar, kmBar < 1 ? 1 : 0)} km`;
@@ -196,8 +352,9 @@ load().then(({ metro, fond, runs }) => {
   for (const r of fond.arr) el("path", { d: toD([decode(r)]) + "Z", class: "arr" }, base);
   for (const r of fond.eau) el("path", { d: toD([decode(r)]) + "Z", class: "eau" }, base);
 
-  // Calques : lignes à faire, puis tracés officiels des lignes faites, puis mes traces GPS par-dessus tout
-  const layers = ["todo", "ghost", "run", "hit"].reduce((o, k) => ({ ...o, [k]: el("g", {}, svg) }), {});
+  // Calques : lignes à faire, tracés officiels, écarts, nos traces, zones de survol, repères
+  const layers = ["todo", "ghost", "dev", "run", "hit"].reduce((o, k) => ({ ...o, [k]: el("g", {}, svg) }), {});
+  const marks = el("g", { class: "marks" }, svg);
   let order = 0;
   for (const l of lines) {
     const style = `--c:${l.color};--i:${l.done ? order++ : l.i}`;
@@ -209,9 +366,11 @@ load().then(({ metro, fond, runs }) => {
       const d = l.trace ? toD([l.trace]) : official;
       const ghost = part("ghost");
       if (l.trace) el("path", { d: official, class: "ghost" }, ghost);
+      l.parts.push(ghost);
+      if (l.devD) { const dev = part("dev"); el("path", { d: l.devD, class: "devs" }, dev); l.parts.push(dev); }
       const run = part("run");
-      el("path", { d, class: "run", pathLength: 1 }, run);
-      l.parts.push(ghost, run);
+      l.runPath = el("path", { d, class: "run", pathLength: 1 }, run);
+      l.parts.push(run);
     } else {
       l.parts.push(part("todo"));
       el("path", { d: official, class: "todo" }, l.parts[0]);
@@ -223,7 +382,7 @@ load().then(({ metro, fond, runs }) => {
     l.g = hit;
   }
 
-  // Pastilles
+  // ——— Pastilles ———
   const list = document.getElementById("roundels");
   for (const l of lines) {
     const li = document.createElement("li");
@@ -234,21 +393,113 @@ load().then(({ metro, fond, runs }) => {
     b.style.setProperty("--t", textOn(l.color.slice(1)));
     b.innerHTML = label(l.id);
     b.setAttribute("aria-pressed", "false");
-    b.setAttribute("aria-label", `Ligne ${l.id.replace("bis", " bis")}, ${l.done ? "courue" : "à courir"}`);
-    b.addEventListener("click", () => select(selected === l && pinned ? null : l, true));
-    b.addEventListener("mouseenter", () => !pinned && select(l));
-    b.addEventListener("mouseleave", () => !pinned && select(null));
-    b.addEventListener("focus", () => select(l));
+    b.addEventListener("click", () => toggle({ line: l }));
+    b.addEventListener("mouseenter", () => !pinned && show({ line: l }));
+    b.addEventListener("mouseleave", () => !pinned && show(null));
+    b.addEventListener("focus", () => show({ line: l }));
     li.appendChild(b);
     list.appendChild(li);
     l.button = b;
   }
+  for (const l of lines) {
+    l.g.addEventListener("click", (e) => { e.stopPropagation(); toggle({ line: l }); });
+    l.g.addEventListener("mouseenter", () => !pinned && show({ line: l }));
+    l.g.addEventListener("mouseleave", () => !pinned && show(null));
+  }
 
+  // ——— Ce que montre la carte : rien, une ligne isolée, les écarts, ou des repères ———
   const detail = document.getElementById("detail");
   const map = document.getElementById("map"), sticker = document.getElementById("sticker"), leader = document.getElementById("leader");
-  const hint = '<p class="hint">Survolez ou touchez une ligne pour voir son parcours.</p>';
-  detail.innerHTML = hint;
-  let selected = null, pinned = false, fill = null;
+  let view = null, pinned = false, fill = null;
+  const same = (a, b) => !!a && !!b && (a.line ? a.line === b.line : a.key === b.key);
+
+  function toggle(v) { if (pinned && same(view, v)) { pinned = false; show(null); } else { show(v); pinned = true; } }
+
+  function show(v) {
+    if (same(view, v) || (!view && !v)) return; // déjà affiché : surtout ne pas relancer le remplissage orange
+    view = v;
+    if (!v) pinned = false;
+    const l = v && v.line;
+    svg.classList.toggle("has-focus", !!l);
+    svg.classList.toggle("show-dev", !!v && v.key === "dev");
+    svg.classList.toggle("has-marks", !!v && !!v.marks);
+    list.classList.toggle("has-focus", !!l);
+    for (const x of lines) {
+      for (const p of x.parts) p.classList.toggle("is-focus", x === l);
+      x.button.setAttribute("aria-pressed", String(x === l));
+    }
+    for (const b of document.querySelectorAll("[data-view]")) b.setAttribute("aria-pressed", String(!!v && b.dataset.view === v.key));
+    document.getElementById("bars").classList.toggle("has-focus", !!v && String(v.key).startsWith("bar"));
+    if (fill) { fill.cancel(); fill = null; }
+    drawMarks(v && v.marks);
+    sticker.hidden = !l;
+    if (!l) { leader.classList.remove("is-on"); renderDetail(null); return; }
+
+    // Passe au premier plan, sauf la trace et la zone de survol : les déplacer relancerait l'animation ou le survol
+    for (const p of l.parts) if (!(l.runPath && p.contains(l.runPath)) && p !== l.g) p.parentNode.appendChild(p);
+    renderSticker(l);
+    // La ligne apparaît d'abord dans sa couleur, puis notre trace la remplit en orange
+    if (l.done && !reduced) {
+      fill = l.runPath.animate([{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }],
+        { duration: Math.min(3200, 900 + l.ranKm * 90), delay: 350, easing: "cubic-bezier(.45, 0, .3, 1)", fill: "backwards" });
+    }
+    renderDetail(l);
+  }
+  svg.addEventListener("click", () => show(null));
+  // Filet de sécurité : sortir de la carte rend toujours la vue d'ensemble, sauf ligne épinglée au clic
+  map.addEventListener("mouseleave", () => { if (!pinned && view && view.line) show(null); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") show(null); });
+
+  function renderDetail(l) {
+    const t = T();
+    if (!l) { detail.innerHTML = `<p class="hint">${t.hint}</p>`; return; }
+    const link = l.run && l.run.strava ? `<p class="facts"><a href="${l.run.strava}" target="_blank" rel="noopener">${t.onStrava}</a></p>` : `<p class="facts">${t.notYet(l.st)}</p>`;
+    detail.innerHTML = `<p class="route">${l.route}</p>${link}`;
+  }
+
+  function renderSticker(l) {
+    const t = T();
+    const stat = (name, value, unitTxt = "") => `<div><dt>${name}</dt><dd>${value}${unitTxt && `<small>${unitTxt}</small>`}</dd></div>`;
+    let title, stats;
+    if (l.done) {
+      title = `<b>${t.line} ${label(l.id)}</b>${l.run.date ? ` · <span class="when">${day(l.run.date)}</span>` : ""}`;
+      stats = stat(t.distance, fmt(l.ranKm, 2), "km");
+      if (l.run.time) stats += stat(t.pace, pace(l.run.time, l.ranKm), "/km") + stat(t.time, duration(l.run.time));
+      if (l.devMean != null) stats += stat(t.offset, fmt(l.devMean), "m");
+    } else {
+      title = `<b>${t.line} ${label(l.id)}</b> · ${t.upcoming}`;
+      stats = stat(t.route, fmt(l.km, 1), "km") + stat(t.stations, l.st);
+    }
+    sticker.innerHTML = `<p class="sticker-title">${title}</p><dl>${stats}</dl>`;
+    placeSticker(l);
+  }
+
+  // Repères : stations (avec leur nom quand il y en a 15 au plus) ou ponts franchis
+  function drawMarks(m) {
+    marks.replaceChildren();
+    if (!m) return;
+    const r = 3.4 * unit, fs = 11 * unit;
+    for (const p of m.bridges || []) el("circle", { cx: p[0], cy: p[1], r: r * 1.3, class: "bridge", "stroke-width": 1.6 * unit }, marks);
+    const sts = m.stations || [];
+    for (const s of sts) el("circle", { cx: s.p[0], cy: s.p[1], r, class: "st" + (s.passed.length ? "" : " is-zero"), "stroke-width": 1.2 * unit }, marks);
+    if (sts.length > 15) return;
+    // Étiquettes : à droite, sinon à gauche, dessus ou dessous, sinon on renonce plutôt que de chevaucher
+    const placed = [];
+    const overlaps = (b) => placed.some((o) => b[0] < o[2] && b[2] > o[0] && b[1] < o[3] && b[3] > o[1]);
+    for (const s of sts) {
+      const w = s.name.length * fs * 0.5, h = fs, [x, y] = s.p, gap = r + 2 * unit;
+      const tries = [[x + gap, y + h * 0.35, "start"], [x - gap, y + h * 0.35, "end"], [x, y - gap - unit, "middle"], [x, y + gap + h, "middle"]];
+      for (const [tx, ty, anchor] of tries) {
+        const x0 = anchor === "start" ? tx : anchor === "end" ? tx - w : tx - w / 2;
+        const bb = [x0, ty - h, x0 + w, ty];
+        if (overlaps(bb)) continue;
+        placed.push(bb);
+        const txt = el("text", { x: tx, y: ty, "text-anchor": anchor, "font-size": fs, "stroke-width": 3 * unit }, marks);
+        txt.textContent = s.name;
+        break;
+      }
+    }
+  }
 
   // Carte → pixels de la figure : même calcul que preserveAspectRatio="xMidYMid meet"
   const toScreen = () => {
@@ -318,86 +569,116 @@ load().then(({ metro, fond, runs }) => {
     dot.setAttribute("cx", q[0]); dot.setAttribute("cy", q[1]);
     leader.classList.toggle("is-on", d > 6);
   }
-  new ResizeObserver(() => selected && placeSticker(selected)).observe(map);
+  new ResizeObserver(() => { if (view && view.line) placeSticker(view.line); else if (view) drawMarks(view.marks); }).observe(map);
 
-  function select(l, pin = false) {
-    selected = l;
-    pinned = pin && !!l;
-    svg.classList.toggle("has-focus", !!l);
-    list.classList.toggle("has-focus", !!l);
-    for (const x of lines) {
-      for (const p of x.parts) p.classList.toggle("is-focus", x === l);
-      x.button.setAttribute("aria-pressed", String(x === l));
-    }
-    if (fill) { fill.cancel(); fill = null; }
-    sticker.hidden = !l;
-    if (!l) { leader.classList.remove("is-on"); detail.innerHTML = hint; return; }
-    // Passe au premier plan dans chaque calque, sauf la trace : la déplacer relancerait son animation CSS d'arrivée
-    for (const p of l.parts) if (!p.querySelector(".run")) p.parentNode.appendChild(p);
-
-    const stat = (name, value, unit = "") => `<div><dt>${name}</dt><dd>${value}${unit && `<small>${unit}</small>`}</dd></div>`;
-    let title, stats;
-    if (l.done) {
-      title = `<b>Ligne ${label(l.id)}</b>${l.run.date ? ` · ${day(l.run.date)}` : ""}`;
-      stats = stat("Distance", fmt(l.ranKm, 2), "km");
-      if (l.run.time) stats += stat("Allure", pace(l.run.time, l.ranKm), "/km") + stat("Temps", duration(l.run.time));
-      // La ligne apparaît d'abord dans sa couleur, puis notre trace la remplit en orange
-      if (!reduced) {
-        const run = l.parts.find((p) => p.querySelector(".run")).querySelector(".run");
-        fill = run.animate([{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }],
-          { duration: Math.min(3200, 900 + l.ranKm * 90), delay: 350, easing: "cubic-bezier(.45, 0, .3, 1)", fill: "backwards" });
-      }
-    } else {
-      title = `<b>Ligne ${label(l.id)}</b> · à venir`;
-      stats = stat("Tracé", fmt(l.km, 1), "km") + stat("Stations", l.st);
-    }
-    sticker.innerHTML = `<p class="sticker-title">${title}</p><dl>${stats}</dl>`;
-    placeSticker(l);
-
-    const link = l.run && l.run.strava ? `<p class="facts"><a href="${l.run.strava}" target="_blank" rel="noopener">Voir la course sur Strava</a></p>` : `<p class="facts">${l.st} stations, pas encore courue.</p>`;
-    detail.innerHTML = `<p class="route">${l.route}</p>${link}`;
-  }
-
-  for (const l of lines) {
-    l.g.addEventListener("click", (e) => { e.stopPropagation(); select(selected === l && pinned ? null : l, true); });
-    l.g.addEventListener("mouseenter", () => !pinned && select(l));
-    l.g.addEventListener("mouseleave", () => !pinned && select(null));
-  }
-  svg.addEventListener("click", () => select(null));
-  document.addEventListener("keydown", (e) => e.key === "Escape" && select(null));
-
-  // Chiffres
-  const done = lines.filter((l) => l.done);
+  // ——— Chiffres de la colonne ———
   const sum = (arr, f) => arr.reduce((t, l) => t + f(l), 0);
   const ranKm = sum(done, (l) => l.ranKm);
   const last = done.map((l) => l.run.date).filter(Boolean).sort().pop();
-  document.getElementById("stats").innerHTML = `
-    <div><dt>lignes courues</dt><dd>${done.length}<small>/ ${lines.length}</small></dd></div>
-    <div><dt>courus</dt><dd>${fmt(ranKm)}<small>km</small></dd></div>
-    ${last ? `<div class="last"><dt>dernière course</dt><dd>${day(last, { day: "numeric", month: "short" })}</dd></div>` : ""}`;
-
   const live = document.getElementById("live");
   const latest = done.filter((l) => l.run.strava).sort((a, b) => (a.run.date < b.run.date ? 1 : -1))[0];
   live.href = STRAVA_PROFILE || (latest ? latest.run.strava : live.href);
 
-  // Anneau : part des kilomètres (tracés officiels) et des stations des lignes courues
+  // Anneau : part des kilomètres (tracés officiels) et des stations vraiment longées
+  const passedCount = uniq.filter((s) => s.passed.length).length;
   const ratios = [
-    { key: "km", ring: "ring-km", value: sum(done, (l) => l.km) / sum(lines, (l) => l.km), label: "du réseau", sub: `${fmt(sum(done, (l) => l.km))} sur ${fmt(sum(lines, (l) => l.km))} km` },
-    { key: "st", ring: "ring-st", value: sum(done, (l) => l.st) / sum(lines, (l) => l.st), label: "des stations", sub: `${sum(done, (l) => l.st)} sur ${sum(lines, (l) => l.st)}` },
+    { key: "km", ring: "ring-km", value: sum(done, (l) => l.km) / sum(lines, (l) => l.km), a: () => fmt(sum(done, (l) => l.km)), b: () => `${fmt(sum(lines, (l) => l.km))} km`, label: "ofNetwork" },
+    { key: "st", ring: "ring-st", value: passedCount / uniq.length, a: () => passedCount, b: () => uniq.length, label: "ofStations" },
   ];
-  const legend = document.getElementById("donut-legend");
-  legend.innerHTML = ratios.map((r) => `<div class="${r.key}"><dd data-to="${Math.round(r.value * 100)}">0 %</dd><dt>${r.label}</dt><small>${r.sub}</small></div>`).join("");
   for (const r of ratios) document.getElementById(r.ring).style.setProperty("--p", (r.value * 100).toFixed(1));
-  // Les pourcentages comptent au même rythme que l'anneau s'enroule (1,9 s après 0,5 s)
-  const counters = [...legend.querySelectorAll("[data-to]")];
-  const t0 = performance.now() + (reduced ? -1e4 : 500);
-  const tick = (now) => {
-    const k = Math.min(1, Math.max(0, (now - t0) / 1900));
-    const e = 1 - (1 - k) ** 3;
-    for (const c of counters) c.textContent = `${Math.round(c.dataset.to * e)} %`;
-    if (k < 1) requestAnimationFrame(tick);
+
+  // Écarts, Seine, portes, temps
+  const devLines = done.filter((l) => l.devMean != null).sort((a, b) => a.devMean - b.devMean);
+  const devAll = devLines.length ? sum(devLines, (l) => l.devMean * l.ranKm) / sum(devLines, (l) => l.ranKm) : 0;
+  const portesPassed = portes.filter((s) => s.passed.length);
+  const timed = done.filter((l) => l.run.time && l.min);
+
+  // Histogramme : combien de stations passées 0, 1, 2… fois. L'échelle va jusqu'au maximum possible, lignes à venir comprises.
+  const maxK = Math.max(...uniq.map((s) => s.lines.length));
+  const buckets = Array.from({ length: maxK + 1 }, (_, k) => uniq.filter((s) => s.passed.length === k));
+  const tallest = Math.max(...buckets.map((b) => b.length), 1);
+
+  const VIEWS = {
+    dev: { key: "dev" },
+    seine: { key: "seine", marks: { bridges: crossings } },
+    portes: { key: "portes", marks: { stations: portes } },
   };
-  requestAnimationFrame(tick);
+  buckets.forEach((b, k) => { VIEWS["bar" + k] = { key: "bar" + k, marks: { stations: b } }; });
+
+  // Un seul jeu d'écouteurs, posé sur les conteneurs : le contenu peut être redessiné (langue) sans en rajouter
+  for (const holder of [document.getElementById("facts"), document.getElementById("bars")]) {
+    const target = (e) => { const n = e.target.closest("[data-view]"); return n && VIEWS[n.dataset.view]; };
+    holder.addEventListener("mouseover", (e) => { const v = target(e); if (v && !pinned) show(v); });
+    holder.addEventListener("mouseleave", () => !pinned && show(null));
+    holder.addEventListener("focusin", (e) => { const v = target(e); if (v) show(v); });
+    holder.addEventListener("click", (e) => {
+      const v = target(e);
+      if (!v) return;
+      toggle(v);
+      if (phone() && view) map.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "center" });
+    });
+  }
+
+  function paint() {
+    const t = T();
+    document.documentElement.lang = lang;
+    for (const n of document.querySelectorAll("[data-i18n]")) n.textContent = t[n.dataset.i18n];
+    const langBtn = document.getElementById("lang");
+    langBtn.textContent = t.other;
+    langBtn.setAttribute("aria-label", t.otherLabel);
+    for (const l of lines) l.button.setAttribute("aria-label", t.roundel(l.id.replace("bis", " bis"), l.done));
+
+    document.getElementById("stats").innerHTML = `
+      <div><dt>${t.linesRun}</dt><dd>${done.length}<small>/ ${lines.length}</small></dd></div>
+      <div><dt>${t.kmRun}</dt><dd>${fmt(ranKm)}<small>km</small></dd></div>
+      ${last ? `<div class="last"><dt>${t.lastRun}</dt><dd>${day(last, { day: "numeric", month: "short" })}</dd></div>` : ""}`;
+
+    const legend = document.getElementById("donut-legend");
+    const firstPaint = !legend.children.length;
+    legend.innerHTML = ratios.map((r) => `<div class="${r.key}"><dd data-to="${Math.round(r.value * 100)}">${firstPaint ? 0 : Math.round(r.value * 100)} %</dd><dt>${t[r.label]}</dt><small>${t.outOf(r.a(), r.b())}</small></div>`).join("");
+    if (firstPaint) countUp(legend);
+
+    // Frise : numéro, puis la date de la course sur un fil très fin
+    for (const l of lines) {
+      const when = l.done && l.run.date ? `<span>${day(l.run.date, { day: "2-digit", month: "2-digit", year: "2-digit" })}</span>` : "";
+      l.seg.innerHTML = `<i></i><b>${l.id.replace("bis", "<sup>bis</sup>")}</b><div class="when">${when}</div>`;
+    }
+
+    const facts = [];
+    if (devLines.length) {
+      const lo = devLines[0], hi = devLines[devLines.length - 1];
+      facts.push({ view: "dev", big: `${fmt(devAll)}<small>m</small>`, lbl: t.devLabel, sub: t.devSub(fmt(lo.devMean), lo.id, fmt(hi.devMean), hi.id, fmt(Math.max(...devLines.map((l) => l.devMax)))) });
+    }
+    facts.push({ view: "seine", big: crossings.length, lbl: t.seineLabel, sub: t.seineSub });
+    facts.push({ view: "portes", big: portesPassed.length, lbl: t.portesLabel(portes.length), sub: t.portesSub });
+    if (timed.length) {
+      const ran = sum(timed, (l) => l.run.time), byMetro = sum(timed, (l) => l.min * 60);
+      facts.push({ big: duration(ran), lbl: t.timeLabel(duration(byMetro)), sub: t.timeSub(timed.length, timed.map((l) => l.id).join(", ")) });
+    }
+    const pressed = (k) => String(!!view && view.key === k);
+    document.getElementById("facts").innerHTML = facts.map((f) => f.view
+      ? `<button class="fact" type="button" data-view="${f.view}" aria-pressed="${pressed(f.view)}"><span class="big">${f.big}</span><span class="lbl">${f.lbl}</span><span class="sub">${f.sub}</span></button>`
+      : `<div class="fact"><span class="big">${f.big}</span><span class="lbl">${f.lbl}</span><span class="sub">${f.sub}</span></div>`).join("");
+
+    document.getElementById("hist-sub").textContent = t.histSub(uniq.length);
+    document.getElementById("bars").innerHTML = buckets.map((b, k) =>
+      `<button class="bar${k === 0 ? " is-zero" : ""}" type="button" data-view="bar${k}" aria-pressed="${pressed("bar" + k)}" aria-label="${t.barAria(k, b.length)}" style="--h:${(b.length / tallest * 100).toFixed(1)}%"><span class="v">${b.length}</span><i></i><span class="k">${t.bar(k)}</span></button>`).join("");
+
+    if (view && view.line) renderSticker(view.line);
+    renderDetail(view && view.line);
+  }
+
+  // Les pourcentages comptent au même rythme que l'anneau s'enroule (1,9 s après 0,5 s)
+  function countUp(legend) {
+    const t0 = performance.now() + (reduced ? -1e4 : 500);
+    const tick = (now) => {
+      const k = Math.min(1, Math.max(0, (now - t0) / 1900));
+      const e = 1 - (1 - k) ** 3;
+      for (const c of legend.querySelectorAll("[data-to]")) c.textContent = `${Math.round(c.dataset.to * e)} %`;
+      if (k < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
 
   // Frise numérotée, et Tobias et moi au bout de la dernière ligne courue
   const track = document.getElementById("track"), runners = document.getElementById("runners");
@@ -408,10 +689,17 @@ load().then(({ metro, fond, runs }) => {
     s.className = "seg" + (l.done ? " is-done" : "");
     s.style.setProperty("--km", l.km.toFixed(2));
     s.style.setProperty("--c", l.color);
-    s.innerHTML = `<i></i><b>${l.id.replace("bis", "<sup>bis</sup>")}</b>`;
     track.appendChild(s);
     l.seg = s;
   }
+  paint();
+
+  document.getElementById("lang").addEventListener("click", () => {
+    lang = lang === "fr" ? "en" : "fr";
+    store.set(lang);
+    paint();
+  });
+
   const lastDone = lines.reduce((k, l, i) => (l.done ? i : k), -1);
   const place = () => {
     const seg = lastDone >= 0 ? lines[lastDone].seg : null;

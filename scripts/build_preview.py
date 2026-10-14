@@ -11,7 +11,7 @@ html = (root / "index.html").read_text(encoding="utf-8")
 body = re.search(r"<!--app:start-->(.*)<!--app:end-->", html, re.S).group(1)
 fonts = re.search(r'<link rel="stylesheet" href="(https://fonts[^"]+)">', html).group(1)
 data = {name: json.loads((root / "data" / f"{file}.json").read_text(encoding="utf-8"))
-        for name, file in [("metro", "metro-lines"), ("fond", "paris-fond"), ("runs", "runs")]}
+        for name, file in [("metro", "metro-lines"), ("fond", "paris-fond"), ("runs", "runs"), ("stations", "stations")]}
 
 out = f"""<title>Métrava</title>
 <link rel="stylesheet" href="{fonts}">
