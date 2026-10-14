@@ -1,4 +1,4 @@
-// Métrava : carte des lignes de métro courues. Aucune dépendance, juste du SVG.
+// Métrun : carte des lignes de métro courues. Aucune dépendance, juste du SVG.
 "use strict";
 
 // Lien du bouton « Flux live Strava ». Vide : on renvoie vers la dernière course.
@@ -33,7 +33,6 @@ const I18N = {
   fr: {
     locale: "fr-FR", other: "EN", otherLabel: "Read in English",
     live: "Flux live Strava",
-    title: "Paris, ligne par ligne.",
     lede: "Tobias et moi courons depuis plusieurs années. Arrivés à Paris, peut-être rapidement lassés des quais et parcs, une drôle de quête s'est formée dans notre esprit : courir (dans l'ordre bien sûr) les 16 lignes du métro parisien. Cette carte interactive en est la trace.",
     mapTitle: "Carte du métro parisien : traces de course en orange, lignes restantes en pointillés",
     hint: "Survolez ou touchez une ligne pour voir son parcours.",
@@ -61,7 +60,6 @@ const I18N = {
   en: {
     locale: "en-GB", other: "FR", otherLabel: "Lire en français",
     live: "Live Strava feed",
-    title: "Paris, line by line.",
     lede: "Tobias and I have been running for years. When we moved to Paris, perhaps quickly tired of the riverbanks and parks, an odd quest took shape: run all 16 lines of the Paris metro (in order, of course). This interactive map is its trace.",
     mapTitle: "Map of the Paris metro: our runs in orange, lines still to run dotted",
     hint: "Hover or tap a line to see its run.",

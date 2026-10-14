@@ -1,4 +1,4 @@
-# Métrava
+# Métrun
 
 Tobias et moi courons les 16 lignes du métro parisien, d'un terminus à
 l'autre. Ce site montre où on en est : nos traces GPS en orange Strava, les
@@ -57,5 +57,5 @@ python -m http.server
 
 puis ouvrir http://localhost:8000.
 
-`python scripts/build_preview.py` produit aussi `dist/metrava.html`, une
+`python scripts/build_preview.py` produit aussi `dist/metrun.html`, une
 version tout-en-un (données incluses) qui s'ouvre sans serveur.

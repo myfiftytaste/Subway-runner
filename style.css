@@ -123,14 +123,8 @@ body {
   50% { opacity: .35; box-shadow: 0 0 0 5px transparent; }
 }
 
-h1 {
-  margin: 0;
-  font: 600 clamp(2.4rem, 4.6vw, 3.6rem)/0.95 var(--display);
-  letter-spacing: -0.015em;
-  text-wrap: balance;
-}
 .lede {
-  margin: 1rem 0 0;
+  margin: 0;
   max-width: 38ch;
   color: var(--muted);
   font-size: 1.02rem;
@@ -355,7 +349,7 @@ button.fact:hover .big, button.fact:focus-visible .big, button.fact[aria-pressed
 .hist figcaption { display: grid; gap: .2rem; }
 .hist figcaption b { font-weight: 500; }
 .hist figcaption span { color: var(--muted); font-size: .85rem; line-height: 1.4; }
-.bars { display: flex; align-items: flex-end; gap: .5rem; height: 9.75rem; margin-top: 1rem; }
+.bars { display: flex; align-items: flex-end; gap: .5rem; height: 9rem; margin: 1rem 0 1rem; }
 .bar {
   flex: 1 1 0;
   display: flex;
@@ -374,11 +368,12 @@ button.fact:hover .big, button.fact:focus-visible .big, button.fact[aria-pressed
 .bar i { display: block; height: var(--h); min-height: 2px; border-radius: 2px 2px 0 0; background: var(--strava); transition: opacity .2s ease; }
 .bar.is-zero i { background: var(--edge); }
 .bar .v { font: 600 .95rem/1 var(--display); font-variant-numeric: tabular-nums; text-align: center; }
-.bar .k { font: 500 .78rem/1.15 var(--display); color: var(--muted); text-align: center; padding-top: .2rem; border-top: 1px solid var(--muted); }
-.bar .k small { display: block; font-size: .92em; }
+.bar .k { position: relative; font: 500 .78rem/1.15 var(--display); color: var(--muted); text-align: center; padding-top: .2rem; border-top: 1px solid var(--muted); }
+/* « (à venir) » pend sous « jamais » sans relever la base de sa barre */
+.bar .k small { position: absolute; left: 0; right: 0; top: 100%; font-size: .92em; }
 .bars.has-focus .bar:not([aria-pressed="true"]) i { opacity: .35; }
 .bar:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
-.footnote { margin: 1.25rem 0 0; color: var(--muted); font-size: .75rem; line-height: 1.4; }
+.footnote { margin: 2.25rem 0 0; color: var(--muted); font-size: .75rem; line-height: 1.4; }
 
 .credits {
   margin-top: 2.5rem;
