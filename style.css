@@ -443,7 +443,6 @@ svg.has-marks .line { opacity: .3; }
 
 /* Écarts entre notre trace et le tracé officiel : hachures fines */
 .devs { fill: none; stroke: var(--ink); stroke-width: calc(var(--u, 1) * 1px); opacity: 0; transition: opacity .25s ease; }
-.line.is-focus .devs { opacity: .6; }
 svg.show-dev .devs { opacity: .8; }
 svg.show-dev .ghost { opacity: 1; }
 svg.show-dev .run { opacity: .45; transition: opacity .25s ease; } /* l'orange s'efface pour laisser lire les écarts */
