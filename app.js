@@ -102,21 +102,47 @@ const pace = (sec, km) => { const s = Math.round(sec / km); return `${Math.floor
 const duration = (sec) => { const h = Math.floor(sec / 3600), m = Math.round((sec % 3600) / 60); return h ? `${h}h ${String(m).padStart(2, "0")}` : `${m} min`; };
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-// Petit bonhomme qui court : bras et jambes pivotent à l'épaule et à la hanche
-const RUNNER = (cls, name) => `<svg class="runner ${cls}" viewBox="0 0 20 26" role="img" aria-label="${name}">
-  <circle cx="12.5" cy="3.5" r="2.6"/><path d="M12 7 9.5 15"/>
-  <path class="arm a1" d="M11.4 9 7.5 12.5"/><path class="arm a2" d="M11.4 9 15.2 12"/>
-  <path class="leg l1" d="M9.5 15 6 23"/><path class="leg l2" d="M9.5 15 13.6 22.6"/></svg>`;
+// Coureur articulé : la hanche est fixe, cuisses, tibias, bras et avant-bras sont recalculés à chaque image
+const RUNNER = (cls, name) => `<svg class="runner ${cls}" viewBox="-12 -16 24 30" role="img" aria-label="${name}">
+  <path class="back leg"/><path class="back arm"/><path class="torso"/><circle class="head" r="2.7"/>
+  <path class="front leg"/><path class="front arm"/></svg>`;
 
-// Mini-tracé pour la fiche de course, cadré sur ses propres limites
-function miniRoute(l) {
-  const pts = (l.trace ? [l.trace] : l.chains).map((c) => c.map(project));
-  const flat = pts.flat(), xs = flat.map((p) => p[0]), ys = flat.map((p) => p[1]);
-  const [x0, y0] = [Math.min(...xs), Math.min(...ys)];
-  const side = Math.max(Math.max(...xs) - x0, Math.max(...ys) - y0) || 1;
-  const d = pts.map((c) => "M" + c.map(([x, y]) => `${(x - x0).toFixed(1)},${(y - y0).toFixed(1)}`).join("L")).join("");
-  const w = Math.max(...xs) - x0, h = Math.max(...ys) - y0;
-  return `<svg class="mini${l.trace ? "" : " is-todo"}" style="--c:${l.color}" viewBox="${((w - side) / 2).toFixed(1)} ${((h - side) / 2).toFixed(1)} ${side.toFixed(1)} ${side.toFixed(1)}" aria-hidden="true"><path d="${d}"/></svg>`;
+// Point à « len » de p dans la direction « deg » : 0° vers le bas, positif vers l'avant
+const reach = ([x, y], len, deg) => [x + len * Math.sin(deg * Math.PI / 180), y + len * Math.cos(deg * Math.PI / 180)];
+const xy = (p) => p.map((v) => v.toFixed(2)).join(",");
+
+// Une foulée complète pour φ de 0 à 2π
+function pose(r, phi) {
+  const hip = [0, 0.9 * Math.cos(2 * phi)]; // le corps descend à chaque appui
+  const shoulder = reach(hip, 9, 168); // buste penché de 12° vers l'avant
+  const leg = (f) => {
+    const thigh = 28 * Math.sin(f);
+    const knee = 10 + 75 * Math.max(0, Math.cos(f + 0.4)) ** 3; // genou très plié en début de retour de jambe
+    const k = reach(hip, 6.6, thigh);
+    return `M${xy(hip)}L${xy(k)}L${xy(reach(k, 6.6, thigh - knee))}`;
+  };
+  const arm = (a) => { const e = reach(shoulder, 5, a); return `M${xy(shoulder)}L${xy(e)}L${xy(reach(e, 4.4, a + 95))}`; };
+  r.frontLeg.setAttribute("d", leg(phi));
+  r.backLeg.setAttribute("d", leg(phi + Math.PI));
+  r.frontArm.setAttribute("d", arm(-34 * Math.sin(phi))); // chaque bras part à l'opposé de la jambe du même côté
+  r.backArm.setAttribute("d", arm(34 * Math.sin(phi)));
+  r.torso.setAttribute("d", `M${xy(hip)}L${xy(shoulder)}`);
+  const head = reach(shoulder, 3.6, 168);
+  r.head.setAttribute("cx", head[0].toFixed(2));
+  r.head.setAttribute("cy", head[1].toFixed(2));
+}
+
+function animateRunners(svgs) {
+  const rs = svgs.map((s) => ({
+    frontLeg: s.querySelector(".front.leg"), backLeg: s.querySelector(".back.leg"),
+    frontArm: s.querySelector(".front.arm"), backArm: s.querySelector(".back.arm"),
+    torso: s.querySelector(".torso"), head: s.querySelector(".head"),
+  }));
+  const frame = (now) => {
+    rs.forEach((r, i) => pose(r, (now / 700) * 2 * Math.PI + i * 2.3)); // 700 ms la foulée, Tobias décalé
+    if (!reduced) requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
 }
 
 async function load() {
@@ -219,10 +245,80 @@ load().then(({ metro, fond, runs }) => {
   }
 
   const detail = document.getElementById("detail");
-  const donut = document.getElementById("donut"), sticker = document.getElementById("sticker");
+  const map = document.getElementById("map"), sticker = document.getElementById("sticker"), leader = document.getElementById("leader");
   const hint = '<p class="hint">Survolez ou touchez une ligne pour voir son parcours.</p>';
   detail.innerHTML = hint;
-  let selected = null, pinned = false;
+  let selected = null, pinned = false, fill = null;
+
+  // Carte → pixels de la figure : même calcul que preserveAspectRatio="xMidYMid meet"
+  const toScreen = () => {
+    const W = map.clientWidth, H = map.clientHeight, k = Math.min(W / box[2], H / box[3]);
+    const ox = (W - box[2] * k) / 2, oy = (H - box[3] * k) / 2;
+    return ([x, y]) => [ox + (x - box[0]) * k, oy + (y - box[1]) * k];
+  };
+
+  // Pose la fiche dans la zone libre la plus proche de la ligne isolée.
+  // Grille de 8 px : les cases que touche la ligne (+16 px de marge) sont prises,
+  // une table de sommes dit en une opération si un rectangle candidat est libre.
+  function placeSticker(l) {
+    const C = 8, W = map.clientWidth, H = map.clientHeight;
+    const cols = Math.ceil(W / C), rows = Math.ceil(H / C);
+    const busy = new Uint8Array(cols * rows);
+    const mark = (x, y, r) => {
+      const cx = Math.floor(x / C), cy = Math.floor(y / C);
+      for (let j = Math.max(0, cy - r); j <= Math.min(rows - 1, cy + r); j++)
+        for (let i = Math.max(0, cx - r); i <= Math.min(cols - 1, cx + r); i++) busy[j * cols + i] = 1;
+    };
+    const s2p = toScreen(), pts = [];
+    for (const c of [...(l.trace ? [l.trace] : []), ...l.chains]) {
+      const p = c.map((q) => s2p(project(q)));
+      p.forEach((b, i) => {
+        const a = p[i - 1];
+        const n = a ? Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 4) : 1;
+        for (let t = 1; t <= n; t++) pts.push(a ? [a[0] + (b[0] - a[0]) * t / n, a[1] + (b[1] - a[1]) * t / n] : b);
+      });
+    }
+    for (const [x, y] of pts) mark(x, y, 2);
+    mark(12, 20, 4); // flèche nord
+
+    const S = new Uint32Array((cols + 1) * (rows + 1)), w1 = cols + 1;
+    for (let j = 0; j < rows; j++)
+      for (let i = 0; i < cols; i++) S[(j + 1) * w1 + i + 1] = busy[j * cols + i] + S[j * w1 + i + 1] + S[(j + 1) * w1 + i] - S[j * w1 + i];
+
+    const w = sticker.offsetWidth, h = sticker.offsetHeight;
+    const wc = Math.ceil(w / C), hc = Math.ceil(h / C);
+    const sparse = pts.filter((_, k) => k % 3 === 0);
+    const mid = pts.reduce((m, p) => [m[0] + p[0] / pts.length, m[1] + p[1] / pts.length], [0, 0]);
+    let best = null;
+    for (let j = 0; j + hc <= rows; j++)
+      for (let i = 0; i + wc <= cols; i++) {
+        const hits = S[(j + hc) * w1 + i + wc] - S[j * w1 + i + wc] - S[(j + hc) * w1 + i] + S[j * w1 + i];
+        if (best && hits > best.hits) continue;
+        const cx = (i + wc / 2) * C, cy = (j + hc / 2) * C;
+        let near = Infinity;
+        for (const [x, y] of sparse) near = Math.min(near, (x - cx) ** 2 + (y - cy) ** 2);
+        const score = Math.sqrt(near) + 0.25 * Math.hypot(cx - mid[0], cy - mid[1]);
+        if (!best || hits < best.hits || score < best.score) best = { hits, score, x: i * C, y: j * C };
+      }
+    const x = Math.min(best.x, W - w), y = Math.min(best.y, H - h);
+    sticker.style.setProperty("--tx", x + "px");
+    sticker.style.setProperty("--ty", y + "px");
+
+    // Trait d'ancrage : du bord de la fiche au point de la ligne le plus proche
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+    let q = null, d = Infinity;
+    for (const p of pts) {
+      const e = Math.hypot(p[0] - clamp(p[0], x, x + w), p[1] - clamp(p[1], y, y + h));
+      if (e < d) { d = e; q = p; }
+    }
+    const from = [clamp(q[0], x, x + w), clamp(q[1], y, y + h)];
+    const [line, dot] = leader.children;
+    line.setAttribute("x1", from[0]); line.setAttribute("y1", from[1]);
+    line.setAttribute("x2", q[0]); line.setAttribute("y2", q[1]);
+    dot.setAttribute("cx", q[0]); dot.setAttribute("cy", q[1]);
+    leader.classList.toggle("is-on", d > 6);
+  }
+  new ResizeObserver(() => selected && placeSticker(selected)).observe(map);
 
   function select(l, pin = false) {
     selected = l;
@@ -233,10 +329,10 @@ load().then(({ metro, fond, runs }) => {
       for (const p of x.parts) p.classList.toggle("is-focus", x === l);
       x.button.setAttribute("aria-pressed", String(x === l));
     }
-    donut.hidden = !!l;
+    if (fill) { fill.cancel(); fill = null; }
     sticker.hidden = !l;
-    if (!l) { detail.innerHTML = hint; return; }
-    // Passe au premier plan dans chaque calque, sauf la trace : la déplacer relancerait son animation
+    if (!l) { leader.classList.remove("is-on"); detail.innerHTML = hint; return; }
+    // Passe au premier plan dans chaque calque, sauf la trace : la déplacer relancerait son animation CSS d'arrivée
     for (const p of l.parts) if (!p.querySelector(".run")) p.parentNode.appendChild(p);
 
     const stat = (name, value, unit = "") => `<div><dt>${name}</dt><dd>${value}${unit && `<small>${unit}</small>`}</dd></div>`;
@@ -245,11 +341,18 @@ load().then(({ metro, fond, runs }) => {
       title = `<b>Ligne ${label(l.id)}</b>${l.run.date ? ` · ${day(l.run.date)}` : ""}`;
       stats = stat("Distance", fmt(l.ranKm, 2), "km");
       if (l.run.time) stats += stat("Allure", pace(l.run.time, l.ranKm), "/km") + stat("Temps", duration(l.run.time));
+      // La ligne apparaît d'abord dans sa couleur, puis notre trace la remplit en orange
+      if (!reduced) {
+        const run = l.parts.find((p) => p.querySelector(".run")).querySelector(".run");
+        fill = run.animate([{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }],
+          { duration: Math.min(3200, 900 + l.ranKm * 90), delay: 350, easing: "cubic-bezier(.45, 0, .3, 1)", fill: "backwards" });
+      }
     } else {
       title = `<b>Ligne ${label(l.id)}</b> · à venir`;
       stats = stat("Tracé", fmt(l.km, 1), "km") + stat("Stations", l.st);
     }
-    sticker.innerHTML = `${miniRoute(l)}<div><p class="sticker-title">${title}</p><dl>${stats}</dl></div>`;
+    sticker.innerHTML = `<p class="sticker-title">${title}</p><dl>${stats}</dl>`;
+    placeSticker(l);
 
     const link = l.run && l.run.strava ? `<p class="facts"><a href="${l.run.strava}" target="_blank" rel="noopener">Voir la course sur Strava</a></p>` : `<p class="facts">${l.st} stations, pas encore courue.</p>`;
     detail.innerHTML = `<p class="route">${l.route}</p>${link}`;
@@ -299,6 +402,7 @@ load().then(({ metro, fond, runs }) => {
   // Frise numérotée, et Tobias et moi au bout de la dernière ligne courue
   const track = document.getElementById("track"), runners = document.getElementById("runners");
   runners.innerHTML = RUNNER("r-matheo", "Mathéo") + RUNNER("r-tobias", "Tobias");
+  animateRunners([...runners.children]);
   for (const l of lines) {
     const s = document.createElement("div");
     s.className = "seg" + (l.done ? " is-done" : "");

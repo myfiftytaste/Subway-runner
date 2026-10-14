@@ -23,28 +23,11 @@ la page reste légère (environ 40 Ko de données en tout).
 
 ## Synchro Strava
 
-`.github/workflows/strava.yml` lance `scripts/strava_sync.py` toutes les
-heures : toute activité nommée « Ligne N » (« Ligne 3 bis » aussi) devient la
-course de la ligne N, et le commit qui en résulte redéploie le site. Le début
-et la fin de chaque trace sont coupés s'ils s'éloignent de plus de 400 m de la
-ligne, pour ne jamais publier un départ depuis chez soi.
-
-Mise en place, une seule fois :
-
-1. Créer une appli sur https://www.strava.com/settings/api (« Site web » et
-   « Domaine du rappel d'autorisation » : `localhost`).
-2. Ouvrir, en remplaçant `CLIENT_ID` :
-   `https://www.strava.com/oauth/authorize?client_id=CLIENT_ID&response_type=code&redirect_uri=http://localhost&approval_prompt=force&scope=activity:read_all`
-   puis copier le `code=` de l'adresse où l'on atterrit.
-3. Échanger ce code contre un refresh token :
-
-   ```bash
-   curl -X POST https://www.strava.com/oauth/token -d client_id=CLIENT_ID -d client_secret=CLIENT_SECRET -d code=CODE -d grant_type=authorization_code
-   ```
-
-4. Dans le dépôt GitHub, Settings > Secrets and variables > Actions, créer
-   `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET` et `STRAVA_REFRESH_TOKEN`.
-5. Lancer le workflow une fois à la main (onglet Actions > Synchro Strava > Run workflow).
+Depuis juin 2026, l'API Strava demande un abonnement payant, et sa politique
+limite l'affichage public des données. Le guide
+[docs/synchro-strava.md](docs/synchro-strava.md) détaille les deux voies :
+export GPX manuel (gratuit, recommandé) ou synchro hebdomadaire via
+`.github/workflows/strava.yml` (abonnement requis).
 
 ## Ajouter une ligne à la main (GPX)
 

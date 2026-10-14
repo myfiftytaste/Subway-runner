@@ -34,7 +34,7 @@
     <p class="lede">Tobias et moi courons depuis plusieurs années. Arrivés à Paris, peut-être rapidement lassés des quais et parcs, une drôle de quête s'est formée dans notre esprit&nbsp;: courir (dans l'ordre bien sûr) les 16&nbsp;lignes du métro parisien. Cette carte interactive en est la trace.</p>
   </header>
 
-  <aside class="panel" aria-live="polite">
+  <aside class="panel">
     <div class="donut" id="donut">
       <svg viewBox="0 0 100 100" aria-hidden="true">
         <circle class="ring-track" cx="50" cy="50" r="44"/>
@@ -44,25 +44,27 @@
       </svg>
       <dl class="donut-legend" id="donut-legend"></dl>
     </div>
-    <div class="sticker" id="sticker" hidden></div>
-    <svg class="north" viewBox="0 0 24 40" role="img" aria-label="Nord">
-      <path d="M12 3 18 24 12 20 6 24Z" class="north-arrow"/>
-      <text x="12" y="37" class="north-n">N</text>
-    </svg>
   </aside>
 
   <figure class="map" id="map">
     <svg id="svg" role="img" aria-labelledby="map-title" preserveAspectRatio="xMidYMid meet">
       <title id="map-title">Carte du métro parisien : traces de course en orange, lignes restantes en pointillés</title>
     </svg>
-    <figcaption class="key">
-      <ul class="legend">
-        <li><i class="sw sw-run"></i>Couru</li>
-        <li><i class="sw sw-todo"></i>À venir</li>
-      </ul>
-      <div class="scale" id="scale"><i></i><span></span></div>
-    </figcaption>
+    <svg class="north" viewBox="0 0 24 40" role="img" aria-label="Nord">
+      <path d="M12 3 18 24 12 20 6 24Z" class="north-arrow"/>
+      <text x="12" y="37" class="north-n">N</text>
+    </svg>
+    <svg class="leader" id="leader" aria-hidden="true"><line/><circle r="3"/></svg>
+    <div class="sticker" id="sticker" aria-live="polite" hidden></div>
   </figure>
+
+  <div class="key">
+    <ul class="legend">
+      <li><i class="sw sw-run"></i>Couru</li>
+      <li><i class="sw sw-todo"></i>À venir</li>
+    </ul>
+    <div class="scale" id="scale"><i></i><span></span></div>
+  </div>
 
   <section class="lines" aria-label="Les 16 lignes">
     <ol class="roundels" id="roundels"></ol>

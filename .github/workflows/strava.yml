@@ -2,7 +2,7 @@ name: Synchro Strava
 
 on:
   schedule:
-    - cron: '17 * * * *'
+    - cron: '17 6 * * 1' # chaque lundi à 6 h 17 UTC
   workflow_dispatch: {}
 
 permissions:

@@ -50,7 +50,7 @@ body {
     "intro map"
     "lines map"
     "progress map"
-    "credits map";
+    "credits key";
   column-gap: clamp(1rem, 3vw, 3rem);
   min-height: 100%;
   padding-inline: clamp(1rem, 3vw, 2.5rem);
@@ -119,13 +119,12 @@ h1 {
   font-size: 1.02rem;
 }
 
-/* ——— Panneau en haut à droite : anneau de progression, ou fiche de la ligne survolée ——— */
+/* ——— Panneau en haut à droite : anneau de progression ——— */
 .panel {
   grid-area: panel;
   display: flex;
   justify-content: flex-end;
   align-items: flex-start;
-  gap: 1.25rem;
   min-height: 7.5rem;
 }
 .donut { display: flex; align-items: center; gap: 1rem; }
@@ -158,21 +157,38 @@ h1 {
 .donut-legend .km dd { color: var(--strava); }
 .donut-legend small { grid-column: 2; font-size: .75rem; color: var(--muted); }
 
-/* Fiche de course, dans l'esprit d'un partage Strava sur fond transparent */
-.sticker { display: flex; align-items: center; gap: 1.1rem; }
-.sticker > div { min-width: 0; }
-.sticker .mini { width: 5.5rem; height: 5.5rem; flex: none; overflow: visible; }
-.sticker .mini path { fill: none; stroke: var(--strava); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
-.sticker .mini.is-todo path { stroke: var(--cc); stroke-dasharray: 0 5; stroke-width: 3; }
-.sticker-title { margin: 0 0 .45rem; font: 600 .95rem/1.2 var(--display); color: var(--muted); }
+/* Fiche de course posée sur la carte, dans l'esprit d'un partage Strava.
+   app.js la place dans un espace libre près de la ligne, reliée à elle par un trait fin. */
+.sticker {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(var(--tx, 0px), var(--ty, 0px));
+  padding: .65rem .85rem .7rem;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--paper) 84%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 6px 24px -12px color-mix(in srgb, var(--ink) 40%, transparent);
+  pointer-events: none;
+  animation: tag-in .18s ease-out;
+}
+@keyframes tag-in { from { opacity: 0; } }
+.sticker-title { margin: 0 0 .35rem; font: 600 .95rem/1.2 var(--display); color: var(--muted); white-space: nowrap; }
 .sticker-title b { color: var(--ink); }
-.sticker dl { margin: 0; display: flex; flex-wrap: wrap; gap: .3rem 1.4rem; }
+.sticker dl { margin: 0; display: flex; gap: 1.2rem; }
 .sticker dl div { display: flex; flex-direction: column-reverse; }
-.sticker dt { font-size: .8rem; color: var(--muted); }
-.sticker dd { margin: 0; font: 700 1.65rem/1.05 var(--display); font-variant-numeric: tabular-nums; }
+.sticker dt { font-size: .78rem; color: var(--muted); }
+.sticker dd { margin: 0; font: 700 1.45rem/1.05 var(--display); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .sticker dd small { font-size: .6em; font-weight: 600; margin-left: .12em; }
 
-.north { width: 1.3rem; height: 2.15rem; flex: none; }
+.leader { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.leader line { stroke: var(--muted); stroke-width: 1; }
+.leader circle { fill: var(--paper); stroke: var(--ink); stroke-width: 1.5; }
+.leader:not(.is-on) { display: none; }
+
+.map .north { inset: 0 auto auto 0; width: 1.3rem; height: 2.15rem; pointer-events: none; } /* .map svg l'étirerait sinon */
 .north-arrow { fill: var(--muted); }
 .north-n { font: 600 11px var(--display); fill: var(--muted); text-anchor: middle; }
 
@@ -268,18 +284,12 @@ h1 {
   transform: translateX(var(--x, 0px));
   transition: transform 2.8s cubic-bezier(.35, .1, .3, 1);
 }
-.runner { width: 1.35rem; height: 1.8rem; overflow: visible; animation: bob .28s ease-in-out infinite alternate; }
-.runner + .runner { animation-delay: -.14s; }
+.runner { width: 1.5rem; height: 2rem; overflow: visible; }
+.runner path { fill: none; stroke: currentColor; stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; }
+.runner .back { opacity: .45; }
 .runner circle { fill: currentColor; }
-.runner path { fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; transform-box: view-box; }
-.runner .arm { transform-origin: 11.4px 9px; }
-.runner .leg { transform-origin: 9.5px 15px; }
-.runner .a1, .runner .l2 { animation: swing .28s ease-in-out infinite alternate; }
-.runner .a2, .runner .l1 { animation: swing .28s ease-in-out -.28s infinite alternate-reverse; }
 .r-matheo { color: var(--ink); }
 .r-tobias { color: var(--strava); }
-@keyframes swing { from { transform: rotate(-30deg); } to { transform: rotate(30deg); } }
-@keyframes bob { to { transform: translateY(-1.5px); } }
 
 .credits {
   grid-area: credits;
@@ -349,17 +359,17 @@ h1 {
 svg.has-focus .line:not(.is-focus) { opacity: .12; }
 svg.has-focus .line.is-focus .todo { animation: none; opacity: 1; }
 
-/* Légende et échelle, en bas à gauche de la carte */
+/* Légende et échelle, sous la carte à droite */
 .key {
-  position: absolute;
-  left: 0;
-  bottom: 0;
+  grid-area: key;
+  justify-self: end;
+  align-self: end;
   display: grid;
+  justify-items: end;
   gap: .45rem;
-  padding: .5rem .6rem .5rem 0;
+  margin-top: .75rem;
   font-size: .78rem;
   color: var(--muted);
-  pointer-events: none;
 }
 .legend { list-style: none; margin: 0; padding: 0; display: flex; gap: 1rem; }
 .legend li { display: flex; align-items: center; gap: .4rem; }
@@ -379,7 +389,7 @@ svg.has-focus .line.is-focus .todo { animation: none; opacity: 1; }
   .run { animation: none; stroke-dashoffset: 0; }
   .todo { animation: none; opacity: .8; }
   .ring { animation: none; }
-  .rec, .runner, .runner path { animation: none; }
+  .rec, .sticker { animation: none; }
   .runners, .roundel, .line, .ghost { transition: none; }
 }
 
@@ -388,14 +398,15 @@ svg.has-focus .line.is-focus .todo { animation: none; opacity: 1; }
   .app {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: none;
-    grid-template-areas: "intro" "map" "panel" "lines" "progress" "credits";
+    grid-template-areas: "intro" "map" "key" "panel" "lines" "progress" "credits";
     min-height: 0;
   }
   .map { height: min(118vw, 72vh); margin-top: 1rem; }
-  .panel { justify-content: space-between; margin-top: 1rem; min-height: 6.5rem; }
+  .panel { justify-content: flex-start; margin-top: 1rem; min-height: 6.5rem; }
   .donut svg { width: 5.5rem; height: 5.5rem; }
-  .sticker .mini { width: 4.5rem; height: 4.5rem; }
-  .sticker dd { font-size: 1.4rem; }
+  .sticker { padding: .5rem .65rem; }
+  .sticker dl { gap: .9rem; }
+  .sticker dd { font-size: 1.2rem; }
   .lines { margin-top: 1.25rem; }
   .roundels { grid-template-columns: repeat(8, 2.2rem); gap: .45rem; }
   .roundel { width: 2.2rem; height: 2.2rem; }
