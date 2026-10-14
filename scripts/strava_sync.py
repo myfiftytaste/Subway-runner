@@ -33,6 +33,9 @@ def call(url, token=None, form=None):
 
 
 def main():
+    if not all(os.environ.get(k) for k in ("STRAVA_CLIENT_ID", "STRAVA_CLIENT_SECRET", "STRAVA_REFRESH_TOKEN")):
+        print("Secrets Strava absents : synchro ignorée (voir docs/synchro-strava.md).")
+        return
     auth = call("https://www.strava.com/oauth/token", form={
         "client_id": os.environ["STRAVA_CLIENT_ID"],
         "client_secret": os.environ["STRAVA_CLIENT_SECRET"],
