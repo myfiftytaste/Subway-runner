@@ -47,15 +47,13 @@ const I18N = {
     numbers: "En chiffres",
     numbersHint: "Survolez ou touchez un chiffre pour le voir sur la carte.",
     devLabel: "d'écart moyen avec le tracé officiel",
-    devSub: (lo, llo, hi, lhi, peak) => `De ${lo} m sur la ${llo}, la plus fidèle, à ${hi} m sur la ${lhi}, avec une pointe à ${peak} m.`,
-    seineLabel: "traversées de la Seine", seineSub: "Comptées rive à rive : passer par l'île de la Cité compte pour une.",
-    portesLabel: (n) => `portes de Paris franchies, sur ${n}`, portesSub: "Les stations « Porte de… » passées au moins une fois.",
+    seineLabel: "traversées de la Seine, rive à rive",
+    portesLabel: (n) => `portes de Paris franchies, sur ${n}`,
     timeLabel: (metro) => `courus, contre ${metro} en métro*`,
-    timeSub: (n, lines) => `Sur ${n === 1 ? "la ligne chronométrée" : `les ${n} lignes chronométrées`} (${lines}).`,
     timeNote: "* Temps de parcours d'un terminus à l'autre, rame à l'heure et sans incident à bord. Source : Wikipédia.",
-    histTitle: "Combien de fois on est passés par chaque station",
+    histTitle: "Distribution des stations de métro selon notre nombre de passages",
     histSub: (n) => `${n} stations au total. Une station compte quand notre trace passe à moins de ${PASSED_M} m.`,
-    bar: (k) => (k === 0 ? "jamais" : `${k} fois`),
+    bar: (k) => (k === 0 ? "jamais<small>(à venir)</small>" : `${k} fois`),
     barAria: (k, n) => `${n} stations passées ${k === 0 ? "aucune fois" : `${k} fois`}`,
     credits1: "Tracés des lignes et stations : Île-de-France Mobilités. Fond de carte : Ville de Paris. Courses enregistrées sur Strava.",
     credits2: "Couru avec Tobias. Carte et site : Mathéo Gunay.",
@@ -77,15 +75,13 @@ const I18N = {
     numbers: "By the numbers",
     numbersHint: "Hover or tap a figure to see it on the map.",
     devLabel: "average offset from the official route",
-    devSub: (lo, llo, hi, lhi, peak) => `From ${lo} m on line ${llo}, the most faithful, to ${hi} m on line ${lhi}, peaking at ${peak} m.`,
-    seineLabel: "Seine crossings", seineSub: "Counted bank to bank: going via Île de la Cité counts as one.",
-    portesLabel: (n) => `city gates passed, out of ${n}`, portesSub: "The “Porte de…” stations we have passed at least once.",
+    seineLabel: "Seine crossings, bank to bank",
+    portesLabel: (n) => `city gates passed, out of ${n}`,
     timeLabel: (metro) => `running, against ${metro} by metro*`,
-    timeSub: (n, lines) => `On the ${n === 1 ? "timed line" : `${n} timed lines`} (${lines}).`,
     timeNote: "* End-to-end travel time, train on schedule and no incident on board. Source: Wikipedia (fr).",
-    histTitle: "How many times we passed each station",
+    histTitle: "Metro stations by how many times we passed them",
     histSub: (n) => `${n} stations in all. A station counts when our trace passes within ${PASSED_M} m.`,
-    bar: (k) => (k === 0 ? "never" : `${k}×`),
+    bar: (k) => (k === 0 ? "never<small>(to come)</small>" : `${k}×`),
     barAria: (k, n) => `${n} stations passed ${k === 0 ? "never" : `${k} times`}`,
     credits1: "Lines and stations: Île-de-France Mobilités. Base map: Ville de Paris. Runs recorded on Strava.",
     credits2: "Run with Tobias. Map and site: Mathéo Gunay.",
@@ -474,31 +470,41 @@ load().then(({ metro, fond, runs, stations }) => {
     placeSticker(l);
   }
 
-  // Repères : stations (avec leur nom quand il y en a 15 au plus) ou ponts franchis
+  // Repères : ponts franchis, ou stations toujours nommées sans chevauchement.
+  // Les noms se posent par ordre d'importance (correspondances d'abord) ; un nom qui n'a
+  // plus de place libre autour de sa station est sauté plutôt que de recouvrir un autre.
   function drawMarks(m) {
     marks.replaceChildren();
     if (!m) return;
-    const r = 3.4 * unit, fs = 11 * unit;
+    const r = 3.4 * unit;
     for (const p of m.bridges || []) el("circle", { cx: p[0], cy: p[1], r: r * 1.3, class: "bridge", "stroke-width": 1.6 * unit }, marks);
-    const sts = m.stations || [];
-    for (const s of sts) el("circle", { cx: s.p[0], cy: s.p[1], r, class: "st" + (s.passed.length ? "" : " is-zero"), "stroke-width": 1.2 * unit }, marks);
-    if (sts.length > 15) return;
-    // Étiquettes : à droite, sinon à gauche, dessus ou dessous, sinon on renonce plutôt que de chevaucher
+    const sts = [...(m.stations || [])].sort((a, b) => b.lines.length - a.lines.length || b.passed.length - a.passed.length || a.name.length - b.name.length);
+    if (!sts.length) return;
+    const fs = (sts.length > 15 ? 9.5 : 11) * unit, h = fs, gap = r + 2 * unit;
+    const dots = sts.map((s) => [s.p[0] - r, s.p[1] - r, s.p[0] + r, s.p[1] + r]);
     const placed = [];
-    const overlaps = (b) => placed.some((o) => b[0] < o[2] && b[2] > o[0] && b[1] < o[3] && b[3] > o[1]);
+    const hit = (b, list) => list.some((o) => b[0] < o[2] && b[2] > o[0] && b[1] < o[3] && b[3] > o[1]);
+    const labels = el("g", {}, marks);
     for (const s of sts) {
-      const w = s.name.length * fs * 0.5, h = fs, [x, y] = s.p, gap = r + 2 * unit;
-      const tries = [[x + gap, y + h * 0.35, "start"], [x - gap, y + h * 0.35, "end"], [x, y - gap - unit, "middle"], [x, y + gap + h, "middle"]];
-      for (const [tx, ty, anchor] of tries) {
+      el("circle", { cx: s.p[0], cy: s.p[1], r, class: "st" + (s.passed.length ? "" : " is-zero"), "stroke-width": 1.2 * unit }, marks);
+      const txt = el("text", { "font-size": fs, "stroke-width": 3 * unit }, labels);
+      txt.textContent = s.name;
+      const w = txt.getComputedTextLength(), [x, y] = s.p; // largeur réelle, police chargée comprise
+      // À droite, à gauche, dessus, dessous, puis en diagonale
+      const tries = [[x + gap, y + h * 0.35, "start"], [x - gap, y + h * 0.35, "end"], [x, y - gap, "middle"], [x, y + gap + h * 0.8, "middle"],
+        [x + gap * 0.7, y - gap * 0.7, "start"], [x - gap * 0.7, y - gap * 0.7, "end"], [x + gap * 0.7, y + gap * 0.7 + h * 0.7, "start"], [x - gap * 0.7, y + gap * 0.7 + h * 0.7, "end"]];
+      const spot = tries.find(([tx, ty, anchor]) => {
         const x0 = anchor === "start" ? tx : anchor === "end" ? tx - w : tx - w / 2;
-        const bb = [x0, ty - h, x0 + w, ty];
-        if (overlaps(bb)) continue;
+        const bb = [x0 - unit, ty - h * 0.95, x0 + w + unit, ty + h * 0.3];
+        const inside = bb[0] >= box[0] && bb[1] >= box[1] && bb[2] <= box[0] + box[2] && bb[3] <= box[1] + box[3];
+        if (!inside || hit(bb, placed) || hit(bb, dots)) return false;
         placed.push(bb);
-        const txt = el("text", { x: tx, y: ty, "text-anchor": anchor, "font-size": fs, "stroke-width": 3 * unit }, marks);
-        txt.textContent = s.name;
-        break;
-      }
+        return true;
+      });
+      if (!spot) { txt.remove(); continue; }
+      txt.setAttribute("x", spot[0]); txt.setAttribute("y", spot[1]); txt.setAttribute("text-anchor", spot[2]);
     }
+    marks.appendChild(labels); // les noms passent au-dessus de tous les points
   }
 
   // Carte → pixels de la figure : même calcul que preserveAspectRatio="xMidYMid meet"
@@ -646,19 +652,18 @@ load().then(({ metro, fond, runs, stations }) => {
 
     const facts = [];
     if (devLines.length) {
-      const lo = devLines[0], hi = devLines[devLines.length - 1];
-      facts.push({ view: "dev", big: `${fmt(devAll)}<small>m</small>`, lbl: t.devLabel, sub: t.devSub(fmt(lo.devMean), lo.id, fmt(hi.devMean), hi.id, fmt(Math.max(...devLines.map((l) => l.devMax)))) });
+      facts.push({ view: "dev", big: `${fmt(devAll)}<small>m</small>`, lbl: t.devLabel });
     }
-    facts.push({ view: "seine", big: crossings.length, lbl: t.seineLabel, sub: t.seineSub });
-    facts.push({ view: "portes", big: portesPassed.length, lbl: t.portesLabel(portes.length), sub: t.portesSub });
+    facts.push({ view: "seine", big: crossings.length, lbl: t.seineLabel });
+    facts.push({ view: "portes", big: portesPassed.length, lbl: t.portesLabel(portes.length) });
     if (timed.length) {
       const ran = sum(timed, (l) => l.run.time), byMetro = sum(timed, (l) => l.min * 60);
-      facts.push({ big: duration(ran), lbl: t.timeLabel(duration(byMetro)), sub: t.timeSub(timed.length, timed.map((l) => l.id).join(", ")) });
+      facts.push({ big: duration(ran), lbl: t.timeLabel(duration(byMetro)) });
     }
     const pressed = (k) => String(!!view && view.key === k);
     document.getElementById("facts").innerHTML = facts.map((f) => f.view
-      ? `<button class="fact" type="button" data-view="${f.view}" aria-pressed="${pressed(f.view)}"><span class="big">${f.big}</span><span class="lbl">${f.lbl}</span><span class="sub">${f.sub}</span></button>`
-      : `<div class="fact"><span class="big">${f.big}</span><span class="lbl">${f.lbl}</span><span class="sub">${f.sub}</span></div>`).join("");
+      ? `<button class="fact" type="button" data-view="${f.view}" aria-pressed="${pressed(f.view)}"><span class="big">${f.big}</span><span class="lbl">${f.lbl}</span></button>`
+      : `<div class="fact"><span class="big">${f.big}</span><span class="lbl">${f.lbl}</span></div>`).join("");
 
     document.getElementById("hist-sub").textContent = t.histSub(uniq.length);
     document.getElementById("bars").innerHTML = buckets.map((b, k) =>

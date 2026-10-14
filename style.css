@@ -348,7 +348,6 @@ button.fact { cursor: pointer; }
 .fact .big { font: 600 2.1rem/1 var(--display); font-variant-numeric: tabular-nums; white-space: nowrap; transition: color .2s ease; }
 .fact .big small { font-size: .5em; font-weight: 500; color: var(--muted); margin-left: .1em; }
 .fact .lbl { font-weight: 500; line-height: 1.3; }
-.fact .sub { grid-column: 1 / -1; margin: .3rem 0 0; color: var(--muted); font-size: .85rem; line-height: 1.4; }
 button.fact:hover .big, button.fact:focus-visible .big, button.fact[aria-pressed="true"] .big { color: var(--strava); }
 .fact:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
 
@@ -356,7 +355,7 @@ button.fact:hover .big, button.fact:focus-visible .big, button.fact[aria-pressed
 .hist figcaption { display: grid; gap: .2rem; }
 .hist figcaption b { font-weight: 500; }
 .hist figcaption span { color: var(--muted); font-size: .85rem; line-height: 1.4; }
-.bars { display: flex; align-items: flex-end; gap: .5rem; height: 9rem; margin-top: 1rem; }
+.bars { display: flex; align-items: flex-end; gap: .5rem; height: 9.75rem; margin-top: 1rem; }
 .bar {
   flex: 1 1 0;
   display: flex;
@@ -375,7 +374,8 @@ button.fact:hover .big, button.fact:focus-visible .big, button.fact[aria-pressed
 .bar i { display: block; height: var(--h); min-height: 2px; border-radius: 2px 2px 0 0; background: var(--strava); transition: opacity .2s ease; }
 .bar.is-zero i { background: var(--edge); }
 .bar .v { font: 600 .95rem/1 var(--display); font-variant-numeric: tabular-nums; text-align: center; }
-.bar .k { font: 500 .78rem/1 var(--display); color: var(--muted); text-align: center; padding-top: .2rem; border-top: 1px solid var(--muted); }
+.bar .k { font: 500 .78rem/1.15 var(--display); color: var(--muted); text-align: center; padding-top: .2rem; border-top: 1px solid var(--muted); }
+.bar .k small { display: block; font-size: .92em; }
 .bars.has-focus .bar:not([aria-pressed="true"]) i { opacity: .35; }
 .bar:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
 .footnote { margin: 1.25rem 0 0; color: var(--muted); font-size: .75rem; line-height: 1.4; }
@@ -448,8 +448,10 @@ svg.has-marks .line { opacity: .3; }
 
 /* Écarts entre notre trace et le tracé officiel : hachures fines */
 .devs { fill: none; stroke: var(--ink); stroke-width: calc(var(--u, 1) * 1px); opacity: 0; transition: opacity .25s ease; }
-.line.is-focus .devs, svg.show-dev .devs { opacity: .6; }
+.line.is-focus .devs { opacity: .6; }
+svg.show-dev .devs { opacity: .8; }
 svg.show-dev .ghost { opacity: 1; }
+svg.show-dev .run { opacity: .45; transition: opacity .25s ease; } /* l'orange s'efface pour laisser lire les écarts */
 
 /* Stations, portes et ponts mis en avant depuis les chiffres */
 .marks { pointer-events: none; }
