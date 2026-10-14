@@ -2,7 +2,7 @@
 "use strict";
 
 // Lien du bouton « Flux live Strava ». Vide : on renvoie vers la dernière course.
-const STRAVA_PROFILE = ""; // ex. https://www.strava.com/athletes/12345678
+const STRAVA_PROFILE = "https://www.strava.com/athletes/59931355";
 
 // Ordre RATP. min : temps de parcours terminus à terminus en métro, en minutes (Wikipédia,
 // moyenne des deux sens). 7 : branche de Mairie d'Ivry, la valeur basse. 13 : non publié.
