@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Stravatp</title>
-<meta name="description" content="Je cours les 16 lignes du métro parisien, d'un terminus à l'autre. La carte de là où j'en suis.">
-<meta property="og:title" content="Stravatp : Paris, ligne par ligne">
-<meta property="og:description" content="Je cours les 16 lignes du métro parisien, d'un terminus à l'autre.">
+<title>Métrava</title>
+<meta name="description" content="Tobias et moi courons les 16 lignes du métro parisien, d'un terminus à l'autre. Cette carte interactive en est la trace.">
+<meta property="og:title" content="Métrava : Paris, ligne par ligne">
+<meta property="og:description" content="Courir les 16 lignes du métro parisien, d'un terminus à l'autre.">
 <meta name="theme-color" content="#EDF1EF" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0F1E27" media="(prefers-color-scheme: dark)">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23FC4C02'/%3E%3Cpath d='M7 20 L13 12 L19 18 L25 10' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23FFCD00'/%3E%3Cpath d='M8.6 22.4 10.3 10.6 12.2 13.1 15.7 18.4 19.6 12.4 21.6 10.2 23.4 22.6' fill='none' stroke='%231E2B32' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='23.4' cy='22.6' r='2.4' fill='%23FC4C02'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Barlow:wght@400;500&display=swap">
@@ -19,30 +19,66 @@
 <!--app:start-->
 <div class="app">
   <header class="intro">
-    <p class="brand">Stravatp</p>
+    <div class="topbar">
+      <p class="brand">
+        <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+          <circle cx="16" cy="16" r="15" class="mark-disc"/>
+          <path d="M8.6 22.4 10.3 10.6 12.2 13.1 15.7 18.4 19.6 12.4 21.6 10.2 23.4 22.6" class="mark-trace"/>
+          <circle cx="23.4" cy="22.6" r="2.4" class="mark-end"/>
+        </svg>
+        Métrava
+      </p>
+      <a class="live" id="live" href="https://www.strava.com" target="_blank" rel="noopener">Flux live Strava <span class="rec" aria-hidden="true"></span></a>
+    </div>
     <h1>Paris, ligne par ligne.</h1>
-    <p class="lede">Je cours les 16&nbsp;lignes du métro, d'un terminus à l'autre, au plus près de leur tracé souterrain. En orange, ma trace GPS. Dessous, en fin trait, la ligne officielle. En pointillés, celles qui m'attendent.</p>
+    <p class="lede">Tobias et moi courons depuis plusieurs années. Arrivés à Paris, peut-être rapidement lassés des quais et parcs, une drôle de quête s'est formée dans notre esprit&nbsp;: courir (dans l'ordre bien sûr) les 16&nbsp;lignes du métro parisien. Cette carte interactive en est la trace.</p>
   </header>
+
+  <aside class="panel" aria-live="polite">
+    <div class="donut" id="donut">
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <circle class="ring-track" cx="50" cy="50" r="44"/>
+        <circle class="ring ring-km" id="ring-km" cx="50" cy="50" r="44" pathLength="100"/>
+        <circle class="ring-track inner" cx="50" cy="50" r="31"/>
+        <circle class="ring ring-st" id="ring-st" cx="50" cy="50" r="31" pathLength="100"/>
+      </svg>
+      <dl class="donut-legend" id="donut-legend"></dl>
+    </div>
+    <div class="sticker" id="sticker" hidden></div>
+    <svg class="north" viewBox="0 0 24 40" role="img" aria-label="Nord">
+      <path d="M12 3 18 24 12 20 6 24Z" class="north-arrow"/>
+      <text x="12" y="37" class="north-n">N</text>
+    </svg>
+  </aside>
 
   <figure class="map" id="map">
     <svg id="svg" role="img" aria-labelledby="map-title" preserveAspectRatio="xMidYMid meet">
-      <title id="map-title">Carte du métro parisien : lignes courues en orange, lignes restantes en pointillés</title>
+      <title id="map-title">Carte du métro parisien : traces de course en orange, lignes restantes en pointillés</title>
     </svg>
+    <figcaption class="key">
+      <ul class="legend">
+        <li><i class="sw sw-run"></i>Couru</li>
+        <li><i class="sw sw-todo"></i>À venir</li>
+      </ul>
+      <div class="scale" id="scale"><i></i><span></span></div>
+    </figcaption>
   </figure>
 
   <section class="lines" aria-label="Les 16 lignes">
     <ol class="roundels" id="roundels"></ol>
-    <div class="detail" id="detail" aria-live="polite"></div>
+    <div class="detail" id="detail"></div>
   </section>
 
-  <section class="progress" aria-label="Où j'en suis">
+  <section class="progress" aria-label="Où on en est">
     <dl class="stats" id="stats"></dl>
-    <div class="strip" id="strip" aria-hidden="true"></div>
+    <div class="track" id="track">
+      <div class="runners" id="runners" aria-hidden="true"></div>
+    </div>
   </section>
 
   <footer class="credits">
     <p>Tracés des lignes&nbsp;: Île-de-France Mobilités. Fond de carte&nbsp;: Ville de Paris. Courses enregistrées sur Strava.</p>
-    <p>Un projet perso de Mathéo Gunay.</p>
+    <p>Couru avec Tobias. Carte et site&nbsp;: Mathéo Gunay.</p>
   </footer>
 </div>
 <!--app:end-->

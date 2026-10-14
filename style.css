@@ -1,4 +1,4 @@
-/* Plan de ville en plein jour : la carte occupe tout l'écran, le texte tient dans une colonne à gauche.
+/* Plan de ville en plein jour : la carte occupe l'écran, le texte tient dans une colonne à gauche.
    Une seule audace : l'orange Strava qui se trace sur les lignes courues. Le reste reste calme. */
 :root {
   --paper: #EDF1EF;   /* fond, calcaire froid */
@@ -8,6 +8,9 @@
   --ink: #1E2B32;
   --muted: #5D6C73;
   --strava: #FC4C02;
+  --rec: #FF2E1F;     /* voyant « enregistrement », plus rouge que l'orange des traces */
+  --metro: #FFCD00;   /* jaune de la marque */
+  --on-metro: #1E2B32;
   --lift: 0%;         /* éclaircit les couleurs RATP sombres sur fond nuit */
   --display: "Barlow Semi Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
   --body: "Barlow", "Segoe UI", system-ui, sans-serif;
@@ -16,19 +19,20 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --paper: #0F1E27; --land: #152A36; --edge: #24404F; --seine: #0A1820;
-    --ink: #E5ECEE; --muted: #8FA3AC; --strava: #FF5A14; --lift: 42%;
+    --ink: #E5ECEE; --muted: #8FA3AC; --strava: #FF5A14; --rec: #FF4A33; --lift: 42%;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --paper: #0F1E27; --land: #152A36; --edge: #24404F; --seine: #0A1820;
-  --ink: #E5ECEE; --muted: #8FA3AC; --strava: #FF5A14; --lift: 42%;
+  --ink: #E5ECEE; --muted: #8FA3AC; --strava: #FF5A14; --rec: #FF4A33; --lift: 42%;
   color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 /* --cc : couleur officielle de la ligne, éclaircie en mode sombre */
-[style*="--c:"], .roundel, .strip span { --cc: color-mix(in srgb, var(--c), #fff var(--lift)); }
+[style*="--c:"] { --cc: color-mix(in srgb, var(--c), #fff var(--lift)); }
 html, body { margin: 0; height: 100%; }
 body {
   background: var(--paper);
@@ -40,8 +44,9 @@ body {
 .app {
   display: grid;
   grid-template-columns: minmax(300px, 400px) minmax(0, 1fr);
-  grid-template-rows: auto auto 1fr auto;
+  grid-template-rows: auto auto auto 1fr auto;
   grid-template-areas:
+    "intro panel"
     "intro map"
     "lines map"
     "progress map"
@@ -52,14 +57,55 @@ body {
   padding-block: clamp(1.25rem, 3vw, 2.5rem);
 }
 
-/* ——— Texte ——— */
+/* ——— En-tête ——— */
 .intro { grid-area: intro; }
-.brand {
-  margin: 0 0 1.75rem;
-  font: 700 1rem/1 var(--display);
-  letter-spacing: .02em;
-  color: var(--strava);
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.6rem;
 }
+.brand {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  font: 700 1.25rem/1 var(--display);
+  letter-spacing: .01em;
+}
+.mark { width: 1.9rem; height: 1.9rem; flex: none; }
+.mark-disc { fill: var(--metro); }
+.mark-trace { fill: none; stroke: var(--on-metro); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.mark-end { fill: var(--strava); }
+
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .35rem .7rem;
+  border: 1px solid var(--edge);
+  border-radius: 999px;
+  color: var(--ink);
+  font: 600 .9rem/1 var(--display);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: border-color .2s ease;
+}
+.live:hover { border-color: var(--rec); }
+.live:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.rec {
+  width: .6rem;
+  height: .6rem;
+  border-radius: 50%;
+  background: var(--rec);
+  animation: rec 1.6s ease-in-out infinite;
+}
+@keyframes rec {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 color-mix(in srgb, var(--rec) 60%, transparent); }
+  50% { opacity: .35; box-shadow: 0 0 0 5px transparent; }
+}
+
 h1 {
   margin: 0;
   font: 600 clamp(2.4rem, 4.6vw, 3.6rem)/0.95 var(--display);
@@ -68,10 +114,67 @@ h1 {
 }
 .lede {
   margin: 1rem 0 0;
-  max-width: 34ch;
+  max-width: 38ch;
   color: var(--muted);
-  font-size: 1.05rem;
+  font-size: 1.02rem;
 }
+
+/* ——— Panneau en haut à droite : anneau de progression, ou fiche de la ligne survolée ——— */
+.panel {
+  grid-area: panel;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 1.25rem;
+  min-height: 7.5rem;
+}
+.donut { display: flex; align-items: center; gap: 1rem; }
+.donut svg { width: 6.5rem; height: 6.5rem; flex: none; }
+.ring-track { fill: none; stroke: var(--edge); stroke-width: 8; }
+.ring-track.inner { stroke-width: 7; }
+.ring {
+  fill: none;
+  stroke-width: 8;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 50px 50px;
+  stroke-dasharray: var(--p, 0) 100;
+  animation: wind 1.9s cubic-bezier(.3, .1, .2, 1) .5s both;
+}
+.ring-km { stroke: var(--strava); }
+.ring-st { stroke: var(--ink); stroke-width: 7; }
+@keyframes wind { from { stroke-dasharray: 0 100; } }
+
+.donut-legend { margin: 0; display: grid; gap: .55rem; }
+.donut-legend div { display: grid; grid-template-columns: auto 1fr; column-gap: .5rem; align-items: baseline; }
+.donut-legend dd {
+  margin: 0;
+  grid-row: 1;
+  font: 600 1.7rem/1 var(--display);
+  font-variant-numeric: tabular-nums;
+  min-width: 3.2ch;
+}
+.donut-legend dt { grid-row: 1; grid-column: 2; font-size: .85rem; color: var(--muted); line-height: 1.25; }
+.donut-legend .km dd { color: var(--strava); }
+.donut-legend small { grid-column: 2; font-size: .75rem; color: var(--muted); }
+
+/* Fiche de course, dans l'esprit d'un partage Strava sur fond transparent */
+.sticker { display: flex; align-items: center; gap: 1.1rem; }
+.sticker > div { min-width: 0; }
+.sticker .mini { width: 5.5rem; height: 5.5rem; flex: none; overflow: visible; }
+.sticker .mini path { fill: none; stroke: var(--strava); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.sticker .mini.is-todo path { stroke: var(--cc); stroke-dasharray: 0 5; stroke-width: 3; }
+.sticker-title { margin: 0 0 .45rem; font: 600 .95rem/1.2 var(--display); color: var(--muted); }
+.sticker-title b { color: var(--ink); }
+.sticker dl { margin: 0; display: flex; flex-wrap: wrap; gap: .3rem 1.4rem; }
+.sticker dl div { display: flex; flex-direction: column-reverse; }
+.sticker dt { font-size: .8rem; color: var(--muted); }
+.sticker dd { margin: 0; font: 700 1.65rem/1.05 var(--display); font-variant-numeric: tabular-nums; }
+.sticker dd small { font-size: .6em; font-weight: 600; margin-left: .12em; }
+
+.north { width: 1.3rem; height: 2.15rem; flex: none; }
+.north-arrow { fill: var(--muted); }
+.north-n { font: 600 11px var(--display); fill: var(--muted); text-anchor: middle; }
 
 /* ——— Pastilles de ligne ——— */
 .lines { grid-area: lines; margin-top: 2rem; }
@@ -98,7 +201,7 @@ h1 {
   padding: 0;
   transition: transform .15s ease, opacity .2s ease;
 }
-.roundel sup { font-size: .55em; margin-left: 1px; }
+.roundel sup, .seg sup { font-size: .55em; margin-left: 1px; }
 .roundel.is-todo {
   background: transparent;
   color: var(--ink);
@@ -122,50 +225,61 @@ h1 {
 .roundel[aria-pressed="true"] { transform: scale(1.12); }
 .roundels.has-focus .roundel:not([aria-pressed="true"]) { opacity: .35; }
 
-.detail {
-  margin-top: 1.1rem;
-  min-height: 3.4rem;
-  max-width: 36ch;
-}
-.detail .route {
-  margin: 0;
-  font: 600 1.2rem/1.2 var(--display);
-}
-.detail .facts { margin: .2rem 0 0; color: var(--muted); }
+.detail { margin-top: 1rem; min-height: 3rem; max-width: 38ch; }
+.detail .route { margin: 0; font: 600 1.15rem/1.25 var(--display); }
+.detail .facts { margin: .15rem 0 0; color: var(--muted); font-size: .95rem; }
 .detail .hint { margin: 0; color: var(--muted); font-size: .95rem; }
 .detail a { color: var(--strava); text-underline-offset: 2px; }
 
 /* ——— Progression ——— */
 .progress { grid-area: progress; align-self: end; margin-top: 2rem; }
-.stats {
-  margin: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem 1.6rem;
-}
+.stats { margin: 0; display: flex; flex-wrap: wrap; gap: 1rem 1.6rem; }
 .stats div { display: flex; flex-direction: column-reverse; }
 .stats dt { color: var(--muted); font-size: .9rem; }
-.stats dd {
-  margin: 0;
-  font: 600 2.1rem/1 var(--display);
-  font-variant-numeric: tabular-nums;
-}
+.stats dd { margin: 0; font: 600 2.1rem/1 var(--display); font-variant-numeric: tabular-nums; }
 .stats dd small { font-size: .55em; font-weight: 500; color: var(--muted); margin-left: .15em; }
+.stats .last dd { font-size: 1.35rem; line-height: 1.55; }
 
-/* Une bande par ligne, longueur proportionnelle aux kilomètres */
-.strip {
+/* Frise : un segment par ligne, longueur proportionnelle aux kilomètres */
+.track {
+  position: relative;
   display: flex;
   gap: 3px;
-  height: 8px;
-  margin-top: 1.25rem;
+  margin-top: 1.1rem;
+  padding-top: 2.1rem; /* la place des coureurs */
 }
-.strip span {
-  flex: var(--km) 1 0;
+.seg { flex: var(--km) 1 0; min-width: 1.1rem; display: flex; flex-direction: column; gap: .3rem; }
+.seg i {
+  display: block;
+  height: 8px;
   border-radius: 2px;
   background: repeating-linear-gradient(90deg, var(--cc) 0 3px, transparent 3px 7px);
-  opacity: .7;
 }
-.strip span.is-done { background: var(--strava); opacity: 1; }
+.seg.is-done i { background: var(--strava); }
+.seg b { font: 600 .75rem/1 var(--display); text-align: center; color: var(--muted); }
+.seg.is-done b { color: var(--ink); }
+
+.runners {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  gap: 1px;
+  transform: translateX(var(--x, 0px));
+  transition: transform 2.8s cubic-bezier(.35, .1, .3, 1);
+}
+.runner { width: 1.35rem; height: 1.8rem; overflow: visible; animation: bob .28s ease-in-out infinite alternate; }
+.runner + .runner { animation-delay: -.14s; }
+.runner circle { fill: currentColor; }
+.runner path { fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; transform-box: view-box; }
+.runner .arm { transform-origin: 11.4px 9px; }
+.runner .leg { transform-origin: 9.5px 15px; }
+.runner .a1, .runner .l2 { animation: swing .28s ease-in-out infinite alternate; }
+.runner .a2, .runner .l1 { animation: swing .28s ease-in-out -.28s infinite alternate-reverse; }
+.r-matheo { color: var(--ink); }
+.r-tobias { color: var(--strava); }
+@keyframes swing { from { transform: rotate(-30deg); } to { transform: rotate(30deg); } }
+@keyframes bob { to { transform: translateY(-1.5px); } }
 
 .credits {
   grid-area: credits;
@@ -184,6 +298,7 @@ h1 {
   min-width: 0;
   min-height: 0;
   position: relative;
+  overflow: hidden;
 }
 .map svg {
   position: absolute;
@@ -191,7 +306,6 @@ h1 {
   width: 100%;
   height: 100%;
 }
-.map { overflow: hidden; }
 .arr { fill: var(--land); stroke: var(--edge); stroke-width: calc(var(--u, 1) * 0.8px); }
 .eau { fill: var(--seine); stroke: none; }
 
@@ -206,8 +320,16 @@ h1 {
 }
 @keyframes blink { from { opacity: .45; } to { opacity: 1; } }
 
-.ghost { fill: none; stroke: var(--cc); stroke-width: calc(var(--u, 1) * 1.8px); stroke-linejoin: round; }
-.is-focus .ghost { stroke-width: calc(var(--u, 1) * 2.4px); opacity: 1; }
+/* Le tracé officiel ne sort que quand on regarde une ligne de près */
+.ghost {
+  fill: none;
+  stroke: var(--cc);
+  stroke-width: calc(var(--u, 1) * 2.4px);
+  stroke-linejoin: round;
+  opacity: 0;
+  transition: opacity .25s ease;
+}
+.line.is-focus .ghost { opacity: 1; }
 .run {
   fill: none;
   stroke: var(--strava);
@@ -227,23 +349,55 @@ h1 {
 svg.has-focus .line:not(.is-focus) { opacity: .12; }
 svg.has-focus .line.is-focus .todo { animation: none; opacity: 1; }
 
+/* Légende et échelle, en bas à gauche de la carte */
+.key {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  display: grid;
+  gap: .45rem;
+  padding: .5rem .6rem .5rem 0;
+  font-size: .78rem;
+  color: var(--muted);
+  pointer-events: none;
+}
+.legend { list-style: none; margin: 0; padding: 0; display: flex; gap: 1rem; }
+.legend li { display: flex; align-items: center; gap: .4rem; }
+.sw { display: inline-block; width: 1.4rem; height: 3px; border-radius: 2px; }
+.sw-run { background: var(--strava); }
+.sw-todo { height: 4px; background: radial-gradient(circle, var(--muted) 1.6px, transparent 2px) 0 50% / 7px 4px repeat-x; }
+.scale { display: flex; align-items: center; gap: .45rem; }
+.scale i {
+  display: block;
+  width: var(--w, 4rem);
+  height: 5px;
+  border: 1px solid var(--muted);
+  background: linear-gradient(90deg, var(--muted) 50%, transparent 50%);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .run { animation: none; stroke-dashoffset: 0; }
   .todo { animation: none; opacity: .8; }
-  .roundel, .line { transition: none; }
+  .ring { animation: none; }
+  .rec, .runner, .runner path { animation: none; }
+  .runners, .roundel, .line, .ghost { transition: none; }
 }
 
-/* ——— Téléphone : texte, carte, pastilles, chiffres ——— */
+/* ——— Téléphone : texte, carte, panneau, pastilles, chiffres ——— */
 @media (max-width: 860px) {
   .app {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: none;
-    grid-template-areas: "intro" "map" "lines" "progress" "credits";
+    grid-template-areas: "intro" "map" "panel" "lines" "progress" "credits";
     min-height: 0;
   }
   .map { height: min(118vw, 72vh); margin-top: 1rem; }
-  .lines { margin-top: 1rem; }
+  .panel { justify-content: space-between; margin-top: 1rem; min-height: 6.5rem; }
+  .donut svg { width: 5.5rem; height: 5.5rem; }
+  .sticker .mini { width: 4.5rem; height: 4.5rem; }
+  .sticker dd { font-size: 1.4rem; }
+  .lines { margin-top: 1.25rem; }
   .roundels { grid-template-columns: repeat(8, 2.2rem); gap: .45rem; }
   .roundel { width: 2.2rem; height: 2.2rem; }
-  .brand { margin-bottom: 1.1rem; }
+  .topbar { margin-bottom: 1.1rem; }
 }
