@@ -336,7 +336,6 @@ body {
 .train { width: 4.8rem; height: 2rem; margin-right: .9rem; overflow: visible; color: var(--ink); }
 .train :is(.shell, .win, .door, .link) { fill: none; stroke: currentColor; stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; }
 .train :is(.win, .door) { stroke-width: 1.6; }
-.train .rail { stroke: var(--muted); stroke-width: 1.2; stroke-linecap: round; }
 .train .wheel { fill: currentColor; }
 .train .lamp { fill: var(--strava); }
 /* Même cadence que les coureurs : un rebond par appui (350 ms), les deux voitures en décalé */

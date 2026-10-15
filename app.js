@@ -211,10 +211,10 @@ const CURSOR = '<svg class="cursor" viewBox="0 0 24 24" aria-hidden="true"><circ
 document.querySelector(".numbers-hint").insertAdjacentHTML("afterbegin", CURSOR);
 
 // Rame de métro dessinée au trait, comme les coureurs : deux voitures basses attelées, portes et
-// vitres fines, bogies sur le rail. Chaque caisse rebondit au rythme des foulées.
+// vitres fines, bogies. Chaque caisse rebondit au rythme des foulées.
 const TRAIN = `<svg class="train" viewBox="-14 0 72 30" aria-hidden="true">
   <g class="speed"><path d="M-12 9H-4"/><path d="M-9 14.5H-3"/><path d="M-13 20H-5"/></g>
-  <path class="rail" d="M-2 27.8H70"/><path class="link" d="M30 17.5H33.2"/>
+  <path class="link" d="M30 17.5H33.2"/>
   <g class="car">
     <rect class="shell" x="1" y="5" width="29" height="17" rx="2.6"/>
     <path class="win" d="M4.5 10.5H7M13.8 10.5H17.2M24 10.5H26.5"/>
