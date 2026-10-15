@@ -207,25 +207,26 @@ const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const phone = () => matchMedia("(max-width: 860px)").matches;
 
 // Petit curseur qui clique, à côté des consignes de survol
-const CURSOR = '<svg class="cursor" viewBox="0 0 24 24" aria-hidden="true"><circle class="cursor-wave" cx="7" cy="5" r="6"/><circle class="cursor-wave w2" cx="7" cy="5" r="6"/><circle class="cursor-dot" cx="7" cy="5" r="1.9"/><path class="cursor-arrow" d="M7 5v13.2l3.4-3.1 2.3 5.2 2.4-1.05-2.3-5.15h4.8z"/></svg>';
+const CURSOR = '<svg class="cursor" viewBox="0 0 24 24" aria-hidden="true"><circle class="cursor-wave" cx="7" cy="5" r="6"/><circle class="cursor-dot" cx="7" cy="5" r="1.9"/><path class="cursor-arrow" d="M7 5v13.2l3.4-3.1 2.3 5.2 2.4-1.05-2.3-5.15h4.8z"/></svg>';
 document.querySelector(".numbers-hint").insertAdjacentHTML("afterbegin", CURSOR);
 
-// Rame de métro parisien, même trait que les coureurs : deux voitures attelées, portes à
-// double vantail, bogies sur le rail. Les caisses sautillent, les roues restent posées.
-const CAR = (x, lead) => {
-  const body = lead
-    ? `M${x + 2.5} 5H${x + 29.5}Q${x + 35} 5 ${x + 36} 11L${x + 36.6} 22Q${x + 36.6} 24 ${x + 34.6} 24H${x + 2.5}Q${x} 24 ${x} 21.5V7.5Q${x} 5 ${x + 2.5} 5Z`
-    : `M${x + 2.5} 5H${x + 31.5}Q${x + 34} 5 ${x + 34} 7.5V21.5Q${x + 34} 24 ${x + 31.5} 24H${x + 2.5}Q${x} 24 ${x} 21.5V7.5Q${x} 5 ${x + 2.5} 5Z`;
-  const doors = [7, 22].map((d) => `<rect class="door" x="${x + d}" y="8" width="4.6" height="14.2" rx=".5"/><rect class="win" x="${x + d + .7}" y="9.2" width="1.3" height="5.6" rx=".4"/><rect class="win" x="${x + d + 2.6}" y="9.2" width="1.3" height="5.6" rx=".4"/>`).join("");
-  const wins = [2.4, 13.6, 28].filter((w) => !(lead && w === 28)).map((w) => `<rect class="win" x="${x + w}" y="8.6" width="${w === 13.6 ? 6.4 : 3.6}" height="5.4" rx=".8"/>`).join("");
-  const front = lead ? `<path class="win" d="M${x + 28.4} 8.6h3q2.8 0 3.6 5.4h-6.6Z"/><circle class="lamp" cx="${x + 35.3}" cy="19.6" r="1.15"/>` : "";
-  const wheels = [4.5, 9, 25, 29.5].map((w) => `<circle class="wheel" cx="${x + w}" cy="26.6" r="1.9"/>`).join("");
-  return `<g class="car${lead ? " lead" : ""}"><path class="body" d="${body}"/><path class="band" d="M${x + 1} 17.4H${x + (lead ? 35.8 : 33)}"/>${doors}${wins}${front}</g>${wheels}`;
-};
-const TRAIN = `<svg class="train" viewBox="0 0 75 30" aria-hidden="true">
-  <g class="speed"><path d="M-12 9H-3"/><path d="M-9 15H-2"/><path d="M-13 21H-5"/></g>
-  <path class="rail" d="M-1 29.1H76"/><rect class="coupler" x="33.6" y="17" width="3" height="2" rx=".5"/>
-  ${CAR(0, false)}${CAR(36.4, true)}
+// Rame de métro dessinée au trait, comme les coureurs : deux voitures basses attelées, portes et
+// vitres fines, bogies sur le rail. Chaque caisse rebondit au rythme des foulées.
+const TRAIN = `<svg class="train" viewBox="-14 0 72 30" aria-hidden="true">
+  <g class="speed"><path d="M-12 9H-4"/><path d="M-9 14.5H-3"/><path d="M-13 20H-5"/></g>
+  <path class="rail" d="M-2 27.8H70"/><path class="link" d="M30 17.5H33.2"/>
+  <g class="car">
+    <rect class="shell" x="1" y="5" width="29" height="17" rx="2.6"/>
+    <path class="win" d="M4.5 10.5H7M13.8 10.5H17.2M24 10.5H26.5"/>
+    <rect class="door" x="9" y="8.4" width="3.2" height="10.6" rx=".8"/><rect class="door" x="19" y="8.4" width="3.2" height="10.6" rx=".8"/>
+  </g>
+  <g class="car lead">
+    <path class="shell" d="M35.5 5H58Q65 5 66.6 12L67.4 19.5Q67.8 22 65 22H35.5Q33.2 22 33.2 19.7V7.3Q33.2 5 35.5 5Z"/>
+    <path class="win" d="M36.6 10.5H39.2M46.8 10.5H49.6M57 10.5H62Q64.2 10.5 64.9 13.6"/>
+    <rect class="door" x="41.4" y="8.4" width="3.2" height="10.6" rx=".8"/><rect class="door" x="51.6" y="8.4" width="3.2" height="10.6" rx=".8"/>
+    <circle class="lamp" cx="65.2" cy="18.6" r="1.2"/>
+  </g>
+  ${[5.5, 9.6, 21.4, 25.5, 38.2, 42.3, 56.6, 60.7].map((x) => `<circle class="wheel" cx="${x}" cy="25" r="1.7"/>`).join("")}
 </svg>`;
 
 // Coureur articulé : la hanche est fixe, cuisses, tibias, bras et avant-bras sont recalculés à chaque image
