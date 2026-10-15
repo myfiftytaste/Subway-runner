@@ -1,4 +1,4 @@
-"""Assemble une version tout-en-un du site (données incluses) dans dist/metrun.html.
+"""Assemble une version tout-en-un du site (données incluses) dans dist/subway-runner.html.
 
 Sert d'aperçu partageable sans serveur. Le site déployé, lui, sert index.html tel quel.
 """
@@ -13,7 +13,7 @@ fonts = re.search(r'<link rel="stylesheet" href="(https://fonts[^"]+)">', html).
 data = {name: json.loads((root / "data" / f"{file}.json").read_text(encoding="utf-8"))
         for name, file in [("metro", "metro-lines"), ("fond", "paris-fond"), ("runs", "runs"), ("stations", "stations")]}
 
-out = f"""<title>Métrun</title>
+out = f"""<title>Subway-runner</title>
 <link rel="stylesheet" href="{fonts}">
 <style>
 {(root / "style.css").read_text(encoding="utf-8")}
@@ -25,5 +25,5 @@ out = f"""<title>Métrun</title>
 </script>
 """
 (root / "dist").mkdir(exist_ok=True)
-(root / "dist" / "metrun.html").write_text(out, encoding="utf-8")
-print(f"dist/metrun.html ({len(out) // 1024} Ko)")
+(root / "dist" / "subway-runner.html").write_text(out, encoding="utf-8")
+print(f"dist/subway-runner.html ({len(out) // 1024} Ko)")

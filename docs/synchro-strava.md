@@ -13,7 +13,7 @@ ou 79,99 $ par an.
 
 **Même en payant, la synchro automatique pose problème pour un site public.**
 La politique de l'API Strava, en vigueur depuis le 1er juin 2026, contient deux règles qui
-visent exactement ce que fait Métrun :
+visent exactement ce que fait Subway-runner :
 
 - section 2.3 : les données Strava d'un utilisateur ne peuvent être montrées
   dans l'application **qu'à cet utilisateur**. Un site ouvert aux recruteurs

@@ -1,4 +1,4 @@
-// Métrun : carte des lignes de métro courues. Aucune dépendance, juste du SVG.
+// Subway-runner : carte des lignes de métro courues. Aucune dépendance, juste du SVG.
 "use strict";
 
 // Lien du bouton « Flux live Strava ». Vide : on renvoie vers la dernière course.
@@ -41,7 +41,7 @@ const I18N = {
     roundel: (id, done) => `Ligne ${id}, ${done ? "courue" : "à courir"}`,
     linesRun: "lignes courues", kmRun: "courus", lastRun: "dernière course",
     ofNetwork: "du réseau", ofStations: "des stations", outOf: (a, b) => `${a} sur ${b}`,
-    line: "Ligne", upcoming: "à venir", distance: "Distance", pace: "Allure", time: "Temps", offset: "Écart moyen", route: "Tracé", stations: "Stations",
+    line: "Ligne", upcoming: "à venir", next: "la prochaine", distance: "Distance", pace: "Allure", time: "Temps", offset: "Écart moyen", route: "Tracé", stations: "Stations",
     run: "Couru", toCome: "À venir",
     numbers: "En chiffres",
     numbersHint: "Survolez ou touchez un chiffre pour le voir sur la carte.",
@@ -55,7 +55,7 @@ const I18N = {
     bar: (k) => (k === 0 ? "jamais<small>(à venir)</small>" : `${k} fois`),
     barAria: (k, n) => `${n} stations passées ${k === 0 ? "aucune fois" : `${k} fois`}`,
     credits1: "Tracés des lignes et stations : Île-de-France Mobilités. Fond de carte : Ville de Paris. Courses enregistrées sur Strava.",
-    credits2: "Couru avec Tobias. Carte et site : Mathéo Gunay.",
+    credits2: "Traitements statistiques et cartographiques : Tanguy Maheo, tous droits réservés. Couru avec Tobias.",
   },
   en: {
     locale: "en-GB", other: "FR", otherLabel: "Lire en français",
@@ -68,7 +68,7 @@ const I18N = {
     roundel: (id, done) => `Line ${id}, ${done ? "run" : "to run"}`,
     linesRun: "lines run", kmRun: "run", lastRun: "last run",
     ofNetwork: "of the network", ofStations: "of stations", outOf: (a, b) => `${a} of ${b}`,
-    line: "Line", upcoming: "coming up", distance: "Distance", pace: "Pace", time: "Time", offset: "Avg. offset", route: "Route", stations: "Stations",
+    line: "Line", upcoming: "coming up", next: "up next", distance: "Distance", pace: "Pace", time: "Time", offset: "Avg. offset", route: "Route", stations: "Stations",
     run: "Run", toCome: "To come",
     numbers: "By the numbers",
     numbersHint: "Hover or tap a figure to see it on the map.",
@@ -82,7 +82,7 @@ const I18N = {
     bar: (k) => (k === 0 ? "never<small>(to come)</small>" : `${k}×`),
     barAria: (k, n) => `${n} stations passed ${k === 0 ? "never" : `${k} times`}`,
     credits1: "Lines and stations: Île-de-France Mobilités. Base map: Ville de Paris. Runs recorded on Strava.",
-    credits2: "Run with Tobias. Map and site: Mathéo Gunay.",
+    credits2: "Statistical and cartographic processing: Tanguy Maheo, all rights reserved. Run with Tobias.",
   },
 };
 
@@ -274,6 +274,9 @@ load().then(({ metro, fond, runs, stations }) => {
     };
   });
   const done = lines.filter((l) => l.done);
+  // La prochaine à courir : la première ligne non courue après la dernière courue, dans l'ordre RATP
+  const lastDoneIdx = lines.reduce((k, l, i) => (l.done ? i : k), -1);
+  const next = lines.slice(lastDoneIdx + 1).find((l) => !l.done) || lines.find((l) => !l.done);
 
   // ——— Calculs : écarts, stations, portes, Seine ———
   for (const l of done.filter((x) => x.trace)) {
@@ -352,7 +355,7 @@ load().then(({ metro, fond, runs, stations }) => {
   let order = 0;
   for (const l of lines) {
     const style = `--c:${l.color};--i:${l.done ? order++ : l.i}`;
-    const part = (layer) => el("g", { class: "line", "data-line": l.id, style }, layers[layer]);
+    const part = (layer) => el("g", { class: "line" + (l === next ? " is-next" : ""), "data-line": l.id, style }, layers[layer]);
     const official = toD(l.chains);
     l.parts = [];
     if (l.done) {
@@ -382,7 +385,7 @@ load().then(({ metro, fond, runs, stations }) => {
     const li = document.createElement("li");
     const b = document.createElement("button");
     b.type = "button";
-    b.className = "roundel " + (l.done ? "is-done" : "is-todo");
+    b.className = "roundel " + (l.done ? "is-done" : "is-todo") + (l === next ? " is-next" : "");
     b.style.setProperty("--c", l.color);
     b.style.setProperty("--t", textOn(l.color.slice(1)));
     b.innerHTML = label(l.id);
@@ -461,7 +464,7 @@ load().then(({ metro, fond, runs, stations }) => {
       if (l.run.time) stats += stat(t.pace, pace(l.run.time, l.ranKm), "/km") + stat(t.time, duration(l.run.time));
       if (l.devMean != null) stats += stat(t.offset, fmt(l.devMean), "m");
     } else {
-      title = `<b>${t.line} ${label(l.id)}</b> · ${t.upcoming}`;
+      title = `<b>${t.line} ${label(l.id)}</b> · ${l === next ? t.next : t.upcoming}`;
       stats = stat(t.route, fmt(l.km, 1), "km") + stat(t.stations, l.st);
     }
     sticker.innerHTML = `<p class="sticker-title">${title}</p><dl>${stats}</dl>`;
@@ -649,14 +652,14 @@ load().then(({ metro, fond, runs, stations }) => {
     }
 
     const facts = [];
-    if (devLines.length) {
-      facts.push({ view: "dev", big: `${fmt(devAll)}<small>m</small>`, lbl: t.devLabel });
-    }
     facts.push({ view: "seine", big: crossings.length, lbl: t.seineLabel });
     facts.push({ view: "portes", big: portesPassed.length, lbl: t.portesLabel(portes.length) });
     if (timed.length) {
       const ran = sum(timed, (l) => l.run.time), byMetro = sum(timed, (l) => l.min * 60);
       facts.push({ big: duration(ran), lbl: t.timeLabel(duration(byMetro)) });
+    }
+    if (devLines.length) {
+      facts.push({ view: "dev", big: `${fmt(devAll)}<small>m</small>`, lbl: t.devLabel });
     }
     const pressed = (k) => String(!!view && view.key === k);
     document.getElementById("facts").innerHTML = facts.map((f) => f.view

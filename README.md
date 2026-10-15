@@ -1,4 +1,4 @@
-# Métrun
+# Subway-runner
 
 En ligne : https://metrun.vercel.app
 
@@ -59,5 +59,5 @@ python -m http.server
 
 puis ouvrir http://localhost:8000.
 
-`python scripts/build_preview.py` produit aussi `dist/metrun.html`, une
+`python scripts/build_preview.py` produit aussi `dist/subway-runner.html`, une
 version tout-en-un (données incluses) qui s'ouvre sans serveur.

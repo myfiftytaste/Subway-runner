@@ -412,6 +412,15 @@ button.fact:hover .big, button.fact:focus-visible .big, button.fact[aria-pressed
 }
 @keyframes blink { from { opacity: .45; } to { opacity: 1; } }
 
+/* La prochaine ligne à courir scintille, sur la carte comme dans sa pastille */
+.line.is-next .todo { stroke-width: calc(var(--u, 1) * 4.2px); animation: next-blink 1.1s ease-in-out infinite alternate; }
+@keyframes next-blink { from { opacity: .15; } to { opacity: 1; } }
+.roundel.is-next { animation: next-ring 1.6s ease-out infinite; }
+@keyframes next-ring {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--cc) 70%, transparent); }
+  100% { box-shadow: 0 0 0 9px transparent; }
+}
+
 /* Le tracé officiel ne sort que quand on regarde une ligne de près */
 .ghost {
   fill: none;
@@ -488,7 +497,8 @@ svg.has-focus .line.is-focus .todo { animation: none; opacity: 1; }
 
 @media (prefers-reduced-motion: reduce) {
   .run { animation: none; stroke-dashoffset: 0; }
-  .todo { animation: none; opacity: .8; }
+  .todo, .line.is-next .todo { animation: none; opacity: .8; }
+  .roundel.is-next { animation: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--cc) 45%, transparent); }
   .ring { animation: none; }
   .rec, .sticker { animation: none; }
   .runners, .roundel, .line, .ghost { transition: none; }
