@@ -65,12 +65,13 @@ body {
 /* ——— En-tête ——— */
 .topbar {
   display: flex;
+  flex-wrap: wrap; /* sur écran étroit, les boutons passent dessous plutôt que de couper le nom */
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1.6rem;
 }
-.tools { display: flex; align-items: center; gap: .5rem; }
+.tools { display: flex; align-items: center; gap: .4rem; }
 .lang {
   padding: .35rem .55rem;
   border: 1px solid var(--edge);
@@ -85,13 +86,24 @@ body {
 .lang:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .brand {
   margin: 0;
+  white-space: nowrap;
   display: flex;
   align-items: center;
   gap: .5rem;
-  font: 700 1.25rem/1 var(--display);
-  letter-spacing: .01em;
+  font: 700 1.2rem/1 var(--display);
+  letter-spacing: .005em;
 }
-.mark { width: 1.9rem; height: 1.9rem; flex: none; }
+.mark { width: 2.15rem; height: 2.15rem; flex: none; }
+.mark-ring {
+  fill: none;
+  stroke: var(--strava);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-dasharray: 90 100;
+  transform: rotate(-90deg);
+  transform-origin: 20px 20px;
+  animation: wind 1.6s cubic-bezier(.3, .1, .2, 1) .2s both;
+}
 .mark-disc { fill: var(--metro); }
 .mark-trace { fill: none; stroke: var(--on-metro); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
 .mark-end { fill: var(--strava); }
@@ -499,7 +511,7 @@ svg.has-focus .line.is-focus .todo { animation: none; opacity: 1; }
   .run { animation: none; stroke-dashoffset: 0; }
   .todo, .line.is-next .todo { animation: none; opacity: .8; }
   .roundel.is-next { animation: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--cc) 45%, transparent); }
-  .ring { animation: none; }
+  .ring, .mark-ring { animation: none; }
   .rec, .sticker { animation: none; }
   .runners, .roundel, .line, .ghost { transition: none; }
 }
