@@ -206,6 +206,21 @@ const norm = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().rep
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const phone = () => matchMedia("(max-width: 860px)").matches;
 
+// Petit curseur qui clique, à côté des consignes de survol
+const CURSOR = '<svg class="cursor" viewBox="0 0 24 24" aria-hidden="true"><circle class="cursor-ripple" cx="7" cy="5" r="6"/><path class="cursor-arrow" d="M7 5v13.2l3.4-3.1 2.3 5.2 2.4-1.05-2.3-5.15h4.8z"/></svg>';
+
+// Rame de métro, même trait que les coureurs : la caisse sautille, les roues restent sur le rail
+const TRAIN = `<svg class="train" viewBox="-15 0 63 24" aria-hidden="true">
+  <g class="speed"><path d="M-13 8H-4"/><path d="M-10 12.5H-3"/><path d="M-14 17H-6"/></g>
+  <g class="car">
+    <path class="body" d="M2.5 4.5H33q7.5 0 11 8l1.4 4.3q.6 2.2-1.7 2.2H2.5Q0 19 0 16.5v-9.5Q0 4.5 2.5 4.5Z"/>
+    <rect class="win" x="4" y="7.5" width="6.2" height="4.6" rx="1"/><rect class="win" x="12.4" y="7.5" width="6.2" height="4.6" rx="1"/>
+    <rect class="win" x="20.8" y="7.5" width="6.2" height="4.6" rx="1"/><path class="win" d="M29.4 7.5h3.8q4.4 0 6.6 4.6h-10.4Z"/>
+    <circle class="lamp" cx="42.6" cy="15.6" r="1.2"/>
+  </g>
+  <circle class="wheel" cx="9" cy="21.2" r="2.1"/><circle class="wheel" cx="35" cy="21.2" r="2.1"/>
+</svg>`;
+
 // Coureur articulé : la hanche est fixe, cuisses, tibias, bras et avant-bras sont recalculés à chaque image
 const RUNNER = (cls, name) => `<svg class="runner ${cls}" viewBox="-12 -16 24 30" role="img" aria-label="${name}">
   <path class="back leg"/><path class="back arm"/><path class="torso"/><circle class="head" r="2.7"/>
@@ -449,7 +464,7 @@ load().then(({ metro, fond, runs, stations }) => {
 
   function renderDetail(l) {
     const t = T();
-    if (!l) { detail.innerHTML = `<p class="hint">${t.hint}</p>`; return; }
+    if (!l) { detail.innerHTML = `<p class="hint">${CURSOR}<span>${t.hint}</span></p>`; return; }
     const link = l.run && l.run.strava ? `<p class="facts"><a href="${l.run.strava}" target="_blank" rel="noopener">${t.onStrava}</a></p>` : `<p class="facts">${t.notYet(l.st)}</p>`;
     detail.innerHTML = `<p class="route">${l.route}</p>${link}`;
   }
@@ -674,11 +689,11 @@ load().then(({ metro, fond, runs, stations }) => {
     renderDetail(view && view.line);
   }
 
-  // Les pourcentages comptent au même rythme que l'anneau s'enroule (1,9 s après 0,5 s)
+  // Les pourcentages comptent au même rythme que l'anneau s'enroule (2,47 s après 0,65 s)
   function countUp(legend) {
-    const t0 = performance.now() + (reduced ? -1e4 : 500);
+    const t0 = performance.now() + (reduced ? -1e4 : 650);
     const tick = (now) => {
-      const k = Math.min(1, Math.max(0, (now - t0) / 1900));
+      const k = Math.min(1, Math.max(0, (now - t0) / 2470));
       const e = 1 - (1 - k) ** 3;
       for (const c of legend.querySelectorAll("[data-to]")) c.textContent = `${Math.round(c.dataset.to * e)} %`;
       if (k < 1) requestAnimationFrame(tick);
@@ -688,8 +703,8 @@ load().then(({ metro, fond, runs, stations }) => {
 
   // Frise numérotée, et Tobias et moi au bout de la dernière ligne courue
   const track = document.getElementById("track"), runners = document.getElementById("runners");
-  runners.innerHTML = RUNNER("r-matheo", "Mathéo") + RUNNER("r-tobias", "Tobias");
-  animateRunners([...runners.children]);
+  runners.innerHTML = TRAIN + RUNNER("r-matheo", "Mathéo") + RUNNER("r-tobias", "Tobias");
+  animateRunners([...runners.querySelectorAll(".runner")]);
   for (const l of lines) {
     const s = document.createElement("div");
     s.className = "seg" + (l.done ? " is-done" : "");

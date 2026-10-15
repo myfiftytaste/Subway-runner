@@ -102,7 +102,7 @@ body {
   stroke-dasharray: 90 100;
   transform: rotate(-90deg);
   transform-origin: 20px 20px;
-  animation: wind 1.6s cubic-bezier(.3, .1, .2, 1) .2s both;
+  animation: wind 2.08s cubic-bezier(.3, .1, .2, 1) .26s both;
 }
 .mark-disc { fill: var(--metro); }
 .mark-trace { fill: none; stroke: var(--on-metro); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
@@ -160,7 +160,7 @@ body {
   transform: rotate(-90deg);
   transform-origin: 50px 50px;
   stroke-dasharray: var(--p, 0) 100;
-  animation: wind 1.9s cubic-bezier(.3, .1, .2, 1) .5s both;
+  animation: wind 2.47s cubic-bezier(.3, .1, .2, 1) .65s both;
 }
 .ring-km { stroke: var(--strava); }
 .ring-st { stroke: var(--ink); stroke-width: 7; }
@@ -320,9 +320,10 @@ body {
   top: 0;
   left: 0;
   display: flex;
+  align-items: flex-end;
   gap: 1px;
   transform: translateX(var(--x, 0px));
-  transition: transform 2.8s cubic-bezier(.35, .1, .3, 1);
+  transition: transform 3.64s cubic-bezier(.35, .1, .3, 1);
 }
 .runner { width: 1.5rem; height: 2rem; overflow: visible; }
 .runner path { fill: none; stroke: currentColor; stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; }
@@ -330,6 +331,55 @@ body {
 .runner circle { fill: currentColor; }
 .r-matheo { color: var(--ink); }
 .r-tobias { color: var(--strava); }
+
+/* La rame suit les coureurs à distance : elle sautille sur place, des traits de vitesse filent derrière */
+.train { width: 3.3rem; height: 1.26rem; margin-right: .55rem; overflow: visible; color: var(--ink); }
+.train .body { fill: currentColor; }
+.train .win { fill: var(--paper); }
+.train .lamp { fill: var(--strava); }
+.train .wheel { fill: currentColor; }
+.train .car { animation: rumble .17s ease-in-out infinite alternate; }
+.train .speed path { fill: none; stroke: var(--muted); stroke-width: 1.4; stroke-linecap: round; stroke-dasharray: 5 9; animation: whoosh .45s linear infinite; }
+.train .speed path:nth-child(2) { animation-delay: -.15s; }
+.train .speed path:nth-child(3) { animation-delay: -.3s; }
+@keyframes rumble { to { transform: translateY(-.7px); } }
+@keyframes whoosh { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 14; } }
+
+/* Curseur qui clique à côté des consignes : il glisse, appuie, une onde orange part de la pointe */
+.hint, .numbers-hint { display: flex; align-items: flex-start; gap: .45rem; }
+.cursor { width: 1.2rem; height: 1.2rem; margin-top: .1rem; flex: none; overflow: visible; } /* calé sur la première ligne */
+.cursor-arrow {
+  fill: var(--ink);
+  stroke: var(--paper);
+  stroke-width: 1.3;
+  stroke-linejoin: round;
+  transform-box: view-box;
+  transform-origin: 7px 5px;
+  animation: cursor-click 2.6s ease-in-out infinite;
+}
+.cursor-ripple {
+  fill: none;
+  stroke: var(--strava);
+  stroke-width: 1.6;
+  transform-box: view-box;
+  transform-origin: 7px 5px;
+  opacity: 0;
+  animation: cursor-ripple 2.6s ease-out infinite;
+}
+@keyframes cursor-click {
+  0% { opacity: 0; transform: translate(5px, 5px); }
+  12% { opacity: 1; }
+  44% { transform: translate(0, 0); }
+  50% { transform: scale(.8); }
+  58% { transform: scale(1); }
+  86% { opacity: 1; transform: translate(0, 0); }
+  100% { opacity: 0; transform: translate(0, 0); }
+}
+@keyframes cursor-ripple {
+  0%, 49% { opacity: 0; transform: scale(.2); }
+  52% { opacity: .9; transform: scale(.3); }
+  82%, 100% { opacity: 0; transform: scale(1.2); }
+}
 
 /* ——— En chiffres ——— */
 .numbers { margin-top: 3.25rem; }
@@ -394,7 +444,7 @@ button.fact:hover .big, button.fact:focus-visible .big, button.fact[aria-pressed
   line-height: 1.45;
 }
 .credits p { margin: 0; max-width: 46ch; }
-.credits p + p { margin-top: .25rem; }
+.credits p + p { margin-top: .9rem; }
 
 /* ——— Carte ——— */
 .map {
@@ -451,8 +501,8 @@ button.fact:hover .big, button.fact:focus-visible .big, button.fact[aria-pressed
   stroke-linejoin: round;
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
-  animation: draw 1.5s cubic-bezier(.55, 0, .25, 1) forwards;
-  animation-delay: calc(var(--i) * 160ms + 250ms);
+  animation: draw 1.95s cubic-bezier(.55, 0, .25, 1) forwards;
+  animation-delay: calc(var(--i) * 208ms + 325ms);
 }
 @keyframes draw { to { stroke-dashoffset: 0; } }
 
@@ -512,7 +562,8 @@ svg.has-focus .line.is-focus .todo { animation: none; opacity: 1; }
   .todo, .line.is-next .todo { animation: none; opacity: .8; }
   .roundel.is-next { animation: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--cc) 45%, transparent); }
   .ring, .mark-ring { animation: none; }
-  .rec, .sticker { animation: none; }
+  .rec, .sticker, .train .car, .train .speed path, .cursor-arrow { animation: none; }
+  .cursor-ripple { display: none; }
   .runners, .roundel, .line, .ghost { transition: none; }
 }
 
