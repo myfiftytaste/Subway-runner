@@ -1,6 +1,6 @@
 # Subway-runner
 
-En ligne : https://metrun.vercel.app
+En ligne : https://subway-runner-paris.vercel.app
 
 Tobias et moi courons les 16 lignes du métro parisien, d'un terminus à
 l'autre. Ce site montre où on en est : nos traces GPS en orange Strava, les
